@@ -1,0 +1,127 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Archives des nouvelles — Carrefour jeunesse-emploi Abitibi-Ouest">
+
+  <header class="bg-dark text-white pt-24 pb-6 lg:pt-28 lg:pb-8 grain">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <p class="text-sm font-bold uppercase tracking-wider text-cjeao mb-1">Archives</p>
+      <div class="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1">
+        <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight">Anciennes nouvelles</h1>
+        <a href="/nouvelles" class="text-gray-200 hover:text-cjeao transition-colors text-base">← Retour au tableau de bord</a>
+      </div>
+      <p class="text-gray-300 text-sm mt-2">Articles publiés il y a plus de 30 jours</p>
+    </div>
+  </header>
+
+  <section class="bg-cream py-12 lg:py-16 min-h-[60vh]">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+
+      <div id="archives-info" class="text-sm text-gray-600 mb-4">Chargement…</div>
+
+      <ul id="archives-list" class="divide-y divide-gray-200 bg-white rounded-xl border border-gray-200 px-3">
+        {Array.from({ length: 12 }).map(() => (
+          <li class="animate-pulse py-3 flex items-start gap-3">
+            <div class="h-5 w-32 bg-gray-200 rounded shrink-0"></div>
+            <div class="flex-1 space-y-2">
+              <div class="h-4 w-full bg-gray-200 rounded"></div>
+              <div class="h-3 w-2/3 bg-gray-200 rounded"></div>
+            </div>
+            <div class="h-3 w-16 bg-gray-200 rounded shrink-0"></div>
+          </li>
+        ))}
+      </ul>
+
+      <nav id="archives-pagination" class="flex items-center justify-between mt-6"></nav>
+
+    </div>
+  </section>
+
+</BaseLayout>
+
+<script>
+  const SOURCES = {
+    'radio-canada':   { label: 'Radio-Canada',       color: 'bg-blue-500' },
+    'tva-abitibi':    { label: 'TVA Abitibi',        color: 'bg-red-500'  },
+    'ville-lasarre':  { label: 'Ville de La Sarre',  color: 'bg-green-600' },
+    'avis-lasarre':   { label: 'Avis La Sarre',      color: 'bg-emerald-500' },
+    'mrcao':          { label: 'MRC AO',             color: 'bg-teal-500' },
+    'cssla':          { label: 'CSSLA',              color: 'bg-orange-500' },
+    'cisss-at':       { label: 'CISSS-AT',           color: 'bg-pink-500' },
+    'mon-abitibi':    { label: 'Mon Abitibi',        color: 'bg-yellow-500' },
+    'indice-bohemien':{ label: 'Indice bohémien',    color: 'bg-fuchsia-500' },
+    'uqat':           { label: 'UQAT',               color: 'bg-indigo-500' },
+    'le-citoyen':     { label: 'Le Citoyen',         color: 'bg-amber-500' },
+  };
+
+  function frDate(dateStr) {
+    if (!dateStr) return '';
+    return new Date(dateStr).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long', year: 'numeric' });
+  }
+
+  function renderArticle(a) {
+    const src = SOURCES[a.source] ?? { label: a.source, color: 'bg-gray-500' };
+    const date = frDate(a.date_publication);
+    return `
+      <li class="group">
+        <a href="${a.url}" target="_blank" rel="noopener noreferrer"
+           class="flex items-start gap-3 py-3 px-3 -mx-3 rounded-lg hover:bg-gray-100 transition-colors">
+          <span class="inline-flex shrink-0 mt-0.5 px-2 py-0.5 rounded text-white text-xs font-semibold ${src.color} w-32 justify-center truncate" title="${src.label}">${src.label}</span>
+          <div class="flex-1 min-w-0">
+            <p class="font-semibold text-gray-900 group-hover:text-cjeao-darker transition-colors leading-snug">
+              ${a.titre ?? ''}
+            </p>
+            ${a.resume ? `<p class="text-sm text-gray-600 leading-relaxed mt-0.5 line-clamp-1">${a.resume}</p>` : ''}
+          </div>
+          <span class="text-xs text-gray-500 shrink-0 mt-0.5 hidden sm:inline">${date}</span>
+        </a>
+      </li>
+    `;
+  }
+
+  function getPageFromURL() {
+    const params = new URLSearchParams(window.location.search);
+    return Math.max(1, parseInt(params.get('page') || '1', 10));
+  }
+
+  function renderPagination(page, totalPages) {
+    const nav = document.getElementById('archives-pagination');
+    if (!nav) return;
+    if (totalPages <= 1) { nav.innerHTML = ''; return; }
+    const prev = page > 1
+      ? `<a href="?page=${page - 1}" class="px-4 py-2 border border-gray-300 rounded-lg hover:border-cjeao hover:text-cjeao-darker transition-colors text-sm font-semibold">← Précédent</a>`
+      : `<span class="px-4 py-2 text-gray-400 text-sm">← Précédent</span>`;
+    const next = page < totalPages
+      ? `<a href="?page=${page + 1}" class="px-4 py-2 border border-gray-300 rounded-lg hover:border-cjeao hover:text-cjeao-darker transition-colors text-sm font-semibold">Suivant →</a>`
+      : `<span class="px-4 py-2 text-gray-400 text-sm">Suivant →</span>`;
+    nav.innerHTML = `${prev}<span class="text-sm text-gray-600">Page ${page} / ${totalPages}</span>${next}`;
+  }
+
+  async function chargerArchives() {
+    const page = getPageFromURL();
+    const list = document.getElementById('archives-list');
+    const info = document.getElementById('archives-info');
+    try {
+      const res = await fetch(`/.netlify/functions/nouvelles-archives?page=${page}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const articles = data.articles || [];
+      if (info) info.textContent = data.total
+        ? `${data.total} article${data.total !== 1 ? 's' : ''} archivé${data.total !== 1 ? 's' : ''}`
+        : 'Aucun article archivé.';
+      if (list && articles.length > 0) {
+        list.innerHTML = articles.map(renderArticle).join('');
+      } else if (list) {
+        list.innerHTML = '<li class="text-gray-500 text-sm py-4">Aucun article sur cette page.</li>';
+      }
+      renderPagination(data.page, data.total_pages);
+    } catch (err) {
+      console.error('[archives]', err);
+      if (info) info.textContent = '';
+      if (list) list.innerHTML = '<li class="text-gray-500 text-sm py-4">Impossible de charger les archives.</li>';
+    }
+  }
+
+  chargerArchives();
+</script>

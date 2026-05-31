@@ -1,0 +1,37 @@
+{
+  "name": "tableau-bord-regional",
+  "description": "Tableau de bord régional open source — météo, urgences, routes, emplois, agenda, agrégateur de nouvelles locales. Construit pour le Carrefour jeunesse-emploi d'Abitibi-Ouest, partagé pour servir d'autres régions.",
+  "type": "module",
+  "version": "1.0.0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Seb005/tableau-bord-regional.git"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/netlify": "^7.0.3",
+    "@astrojs/sitemap": "^3.7.1",
+    "@google-cloud/bigquery": "^8.3.1",
+    "@sentry/browser": "^10.55.0",
+    "@sentry/node": "^10.55.0",
+    "@tailwindcss/vite": "^4.2.1",
+    "astro": "^6.0.5",
+    "node-html-parser": "^7.1.0",
+    "rss-parser": "^3.13.0",
+    "tailwindcss": "^4.2.1",
+    "web-push": "^3.6.7"
+  },
+  "devDependencies": {
+    "dotenv": "^17.4.2",
+    "sharp": "^0.34.5"
+  }
+}

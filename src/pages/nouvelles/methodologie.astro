@@ -1,0 +1,189 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="Méthodologie — Comment on récolte l'information"
+  description="Transparence : sources utilisées, fréquence de mise à jour et limites du tableau de bord des nouvelles de l'Abitibi-Ouest."
+>
+
+  <header class="bg-dark text-white pt-24 pb-6 lg:pt-28 lg:pb-10 grain">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <p class="text-sm font-bold uppercase tracking-wider text-cjeao mb-1">Méthodologie</p>
+      <div class="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2">
+        <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight">Comment on récolte l'information</h1>
+        <a href="/nouvelles" class="text-gray-200 hover:text-cjeao transition-colors text-base shrink-0">← Tableau de bord</a>
+      </div>
+      <p class="text-gray-300 text-base lg:text-lg mt-3 max-w-2xl">
+        Notre tableau de bord agrège des données publiques de plus de 30 sources officielles, mises à jour automatiquement.
+        Voici comment ça fonctionne, en toute transparence.
+      </p>
+    </div>
+  </header>
+
+  <main class="bg-cream py-12 lg:py-16">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+
+      <!-- Principe général -->
+      <section>
+        <h2 class="text-2xl font-extrabold text-gray-900 mb-4">Le principe</h2>
+        <div class="prose prose-gray max-w-none">
+          <p class="text-gray-700 leading-relaxed">
+            Le CJEAO ne produit aucune nouvelle, ne fait aucun reportage et n'édite pas le contenu. Notre rôle est
+            uniquement de <strong>regrouper, dans un seul endroit pratique</strong>, des informations déjà publiées
+            ailleurs par des sources officielles ou des médias établis.
+          </p>
+          <p class="text-gray-700 leading-relaxed mt-3">
+            Concrètement, des programmes informatiques (« fonctions schedulées ») visitent chaque source à intervalle
+            régulier, en extraient les données pertinentes, et les affichent sur la page Nouvelles. Aucune intervention
+            humaine n'est nécessaire — ce qui veut dire aussi que <strong>nous ne pouvons pas garantir l'exactitude</strong>
+            des données à un moment précis. Pour des décisions importantes (urgence, météo extrême, panne majeure),
+            <strong>consultez toujours la source originale</strong> dont le lien est disponible sur chaque widget.
+          </p>
+        </div>
+      </section>
+
+      <!-- Widgets de données -->
+      <section>
+        <h2 class="text-2xl font-extrabold text-gray-900 mb-4">Données opérationnelles (widgets)</h2>
+        <div class="overflow-x-auto -mx-4 sm:mx-0">
+          <table class="w-full text-sm border-collapse">
+            <thead class="bg-gray-100 text-gray-700">
+              <tr>
+                <th class="text-left p-3 border-b border-gray-300">Donnée</th>
+                <th class="text-left p-3 border-b border-gray-300">Source officielle</th>
+                <th class="text-left p-3 border-b border-gray-300 whitespace-nowrap">Fréquence</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white">
+              <tr><td class="p-3 border-b border-gray-200 font-semibold">🚌 Transport scolaire</td>   <td class="p-3 border-b border-gray-200"><a href="https://alertes.csdla.qc.ca/" target="_blank" rel="noopener" class="text-cjeao-darker underline">CSS du Lac-Abitibi</a> · Affiché uniquement en cas d'alerte (annulation, retard)</td><td class="p-3 border-b border-gray-200">1× / h</td></tr>
+              <tr><td class="p-3 border-b border-gray-200 font-semibold">🌤 Météo</td>                  <td class="p-3 border-b border-gray-200"><a href="https://open-meteo.com/" target="_blank" rel="noopener" class="text-cjeao-darker underline">Open-Meteo</a> · Coordonnées La Sarre 48.8°N, -79.2°O</td><td class="p-3 border-b border-gray-200">aux 6 h</td></tr>
+              <tr><td class="p-3 border-b border-gray-200 font-semibold">⛽ Essence</td>                <td class="p-3 border-b border-gray-200"><a href="https://regieessencequebec.ca/" target="_blank" rel="noopener" class="text-cjeao-darker underline">Régie de l'énergie du Québec</a> · 8 stations dans la MRC</td><td class="p-3 border-b border-gray-200">2× / jour</td></tr>
+              <tr><td class="p-3 border-b border-gray-200 font-semibold">💰 Or / USD-CAD</td>           <td class="p-3 border-b border-gray-200">gold-api.com + <a href="https://frankfurter.dev/" target="_blank" rel="noopener" class="text-cjeao-darker underline">frankfurter.dev</a></td><td class="p-3 border-b border-gray-200">1× / jour</td></tr>
+              <tr><td class="p-3 border-b border-gray-200 font-semibold">🔥 SOPFEU</td>                 <td class="p-3 border-b border-gray-200"><a href="https://www.sopfeu.qc.ca/carte/" target="_blank" rel="noopener" class="text-cjeao-darker underline">SOPFEU</a> · Zone La Sarre-Amos</td><td class="p-3 border-b border-gray-200">2× / jour</td></tr>
+              <tr><td class="p-3 border-b border-gray-200 font-semibold">⚠️ Alertes météo</td>          <td class="p-3 border-b border-gray-200"><a href="https://meteo.gc.ca/warnings/" target="_blank" rel="noopener" class="text-cjeao-darker underline">Environnement Canada (MSC GeoMet)</a></td><td class="p-3 border-b border-gray-200">aux 3 h</td></tr>
+              <tr><td class="p-3 border-b border-gray-200 font-semibold">⚡ Pannes Hydro-Québec</td>    <td class="p-3 border-b border-gray-200"><a href="https://infopannes.solutions.hydroquebec.com/" target="_blank" rel="noopener" class="text-cjeao-darker underline">Hydro-Québec Info-Pannes</a></td><td class="p-3 border-b border-gray-200">aux 4 h</td></tr>
+              <tr><td class="p-3 border-b border-gray-200 font-semibold">🛣 État des routes</td>        <td class="p-3 border-b border-gray-200"><a href="https://www.quebec511.info/" target="_blank" rel="noopener" class="text-cjeao-darker underline">Québec 511</a> · Routes 101, 111, 117, 393</td><td class="p-3 border-b border-gray-200">aux 6 h</td></tr>
+              <tr><td class="p-3 border-b border-gray-200 font-semibold">🏥 Urgences</td>               <td class="p-3 border-b border-gray-200"><a href="https://www.msss.gouv.qc.ca/professionnels/statistiques/statistiques-dactivite/urgences/" target="_blank" rel="noopener" class="text-cjeao-darker underline">MSSS Québec</a> · Relevé horaire CSV des urgences du CIUSSS A-T</td><td class="p-3 border-b border-gray-200">aux 2 h</td></tr>
+              <tr><td class="p-3 border-b border-gray-200 font-semibold">💼 Emplois</td>                <td class="p-3 border-b border-gray-200"><a href="https://cjeao.jobstat.ca/fr" target="_blank" rel="noopener" class="text-cjeao-darker underline">Portail Jobstat CJEAO</a></td><td class="p-3 border-b border-gray-200">aux 6 h</td></tr>
+              <tr><td class="p-3 border-b border-gray-200 font-semibold">🔌 Bornes électriques</td>     <td class="p-3 border-b border-gray-200"><a href="https://lecircuitelectrique.com/" target="_blank" rel="noopener" class="text-cjeao-darker underline">Le Circuit Électrique</a> · 80 km autour de La Sarre</td><td class="p-3 border-b border-gray-200">aux 6 h</td></tr>
+              <tr><td class="p-3 border-b border-gray-200 font-semibold">🎭 Loisirs</td>                <td class="p-3 border-b border-gray-200"><a href="https://loisirs.ao.ca/fr/" target="_blank" rel="noopener" class="text-cjeao-darker underline">loisirs.ao.ca</a></td><td class="p-3 border-b border-gray-200">1× / jour</td></tr>
+              <tr><td class="p-3 border-b border-gray-200 font-semibold">🌬 Qualité de l'air</td>       <td class="p-3 border-b border-gray-200"><a href="https://open-meteo.com/" target="_blank" rel="noopener" class="text-cjeao-darker underline">Open-Meteo Air Quality</a></td><td class="p-3 border-b border-gray-200">aux 3 h</td></tr>
+              <tr><td class="p-3 border-b border-gray-200 font-semibold">🌌 Ciel nocturne</td>          <td class="p-3 border-b border-gray-200"><a href="https://www.swpc.noaa.gov/" target="_blank" rel="noopener" class="text-cjeao-darker underline">NOAA SWPC</a> (aurores, Kp) · Phase lunaire (calcul) · <a href="https://www.imo.net/members/imo_showers/working_list/" target="_blank" rel="noopener" class="text-cjeao-darker underline">Calendrier IMO</a> (météores)</td><td class="p-3 border-b border-gray-200">aux 6 h</td></tr>
+              <tr><td class="p-3 border-b border-gray-200 font-semibold">🌐 Internet</td>               <td class="p-3 border-b border-gray-200"><a href="https://www.measurementlab.net/" target="_blank" rel="noopener" class="text-cjeao-darker underline">M-Lab NDT</a> (BigQuery) · Vitesses réelles par FAI dans un rayon de 80 km</td><td class="p-3 border-b border-gray-200">1× / sem.</td></tr>
+              <tr><td class="p-3 border-b border-gray-200 font-semibold">🏢 Chambre de commerce</td> <td class="p-3 border-b border-gray-200"><a href="https://www.cciao.ca/fr/activites/" target="_blank" rel="noopener" class="text-cjeao-darker underline">CCIAO</a> · Activités et événements à venir</td><td class="p-3 border-b border-gray-200">4× / jour</td></tr>
+              <tr><td class="p-3 border-b border-gray-200 font-semibold">💧 Niveaux d'eau</td>          <td class="p-3 border-b border-gray-200"><a href="https://www.cehq.gouv.qc.ca/" target="_blank" rel="noopener" class="text-cjeao-darker underline">CEHQ</a> + Environnement Canada · Lac Macamic, Lac Abitibi, Kinojevis, Harricana</td><td class="p-3 border-b border-gray-200">2× / jour</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Sources de nouvelles -->
+      <section>
+        <h2 class="text-2xl font-extrabold text-gray-900 mb-4">Sources de nouvelles (articles)</h2>
+        <p class="text-gray-700 leading-relaxed mb-4">
+          Nous suivons <strong>13 sources d'information</strong> couvrant l'Abitibi-Ouest et la région. Chaque article
+          renvoie au site original — nous ne reproduisons jamais le contenu intégral.
+        </p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <!-- Médias -->
+          <a href="https://ici.radio-canada.ca/abitibi-temiscamingue" target="_blank" rel="noopener" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-cjeao transition-colors"><div class="font-semibold text-gray-900">Radio-Canada Abitibi</div><div class="text-xs text-gray-500">Média · RSS</div></a>
+          <a href="https://tvaabitibi.ca/" target="_blank" rel="noopener" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-cjeao transition-colors"><div class="font-semibold text-gray-900">TVA Abitibi</div><div class="text-xs text-gray-500">Média · RSS</div></a>
+          <a href="https://monabitibi.ca/" target="_blank" rel="noopener" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-cjeao transition-colors"><div class="font-semibold text-gray-900">Mon Abitibi</div><div class="text-xs text-gray-500">Média · RSS</div></a>
+          <a href="https://journallecitoyen.com/" target="_blank" rel="noopener" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-cjeao transition-colors"><div class="font-semibold text-gray-900">Le Citoyen</div><div class="text-xs text-gray-500">Média · scraping</div></a>
+          <a href="https://indicebohemien.org/" target="_blank" rel="noopener" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-cjeao transition-colors"><div class="font-semibold text-gray-900">L'Indice bohémien</div><div class="text-xs text-gray-500">Culture · RSS</div></a>
+          <!-- Municipal -->
+          <a href="https://www.lasarre.ca/actualites/" target="_blank" rel="noopener" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-cjeao transition-colors"><div class="font-semibold text-gray-900">Ville de La Sarre</div><div class="text-xs text-gray-500">Municipal · scraping</div></a>
+          <a href="https://citoyen.lasarre.ca/avis" target="_blank" rel="noopener" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-cjeao transition-colors"><div class="font-semibold text-gray-900">Avis publics La Sarre</div><div class="text-xs text-gray-500">Municipal · scraping</div></a>
+          <a href="https://www.mrcao.qc.ca/fr/actualites/" target="_blank" rel="noopener" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-cjeao transition-colors"><div class="font-semibold text-gray-900">MRC d'Abitibi-Ouest</div><div class="text-xs text-gray-500">Municipal · scraping</div></a>
+          <!-- Éducation -->
+          <a href="https://cssla.gouv.qc.ca/" target="_blank" rel="noopener" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-cjeao transition-colors"><div class="font-semibold text-gray-900">CSS du Lac-Abitibi</div><div class="text-xs text-gray-500">Éducation · scraping</div></a>
+          <a href="https://www.uqat.ca/nouvelles-et-evenements/" target="_blank" rel="noopener" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-cjeao transition-colors"><div class="font-semibold text-gray-900">UQAT</div><div class="text-xs text-gray-500">Éducation · API interne</div></a>
+          <a href="https://ecolemusiqueao.ca/nouvelles/" target="_blank" rel="noopener" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-cjeao transition-colors"><div class="font-semibold text-gray-900">École de musique AO</div><div class="text-xs text-gray-500">Éducation · scraping</div></a>
+          <!-- Santé -->
+          <a href="https://www.cisss-at.gouv.qc.ca/communiques-de-presse/" target="_blank" rel="noopener" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-cjeao transition-colors"><div class="font-semibold text-gray-900">CISSS-AT</div><div class="text-xs text-gray-500">Santé · scraping</div></a>
+          <!-- Économie -->
+          <a href="https://orezone.com/press-releases/" target="_blank" rel="noopener" class="block p-3 bg-white border border-gray-200 rounded-lg hover:border-cjeao transition-colors"><div class="font-semibold text-gray-900">Orezone</div><div class="text-xs text-gray-500">Économie · scraping</div></a>
+        </div>
+      </section>
+
+      <!-- Filtrage -->
+      <section>
+        <h2 class="text-2xl font-extrabold text-gray-900 mb-4">Filtre de pertinence</h2>
+        <div class="prose prose-gray max-w-none">
+          <p class="text-gray-700 leading-relaxed">
+            La région de l'Abitibi-Témiscamingue est grande. Pour vous montrer uniquement ce qui vous concerne,
+            nous appliquons <strong>deux niveaux de filtrage</strong> :
+          </p>
+          <h3 class="text-lg font-bold text-gray-900 mt-5 mb-2">1. Filtrage à la source (Radio-Canada)</h3>
+          <p class="text-gray-700 leading-relaxed">
+            Le flux RSS de Radio-Canada Abitibi-Témiscamingue inclut parfois des articles provinciaux sans lien avec la région.
+            Avant même d'enregistrer un article, notre collecteur vérifie qu'il mentionne au moins un des <strong>60+ toponymes
+            régionaux</strong> (municipalités, institutions, rivières, communautés autochtones). Un article sur Bellechasse ou
+            Laval est automatiquement exclu.
+          </p>
+          <h3 class="text-lg font-bold text-gray-900 mt-5 mb-2">2. Filtre Abitibi-Ouest (côté visiteur)</h3>
+          <ul class="text-gray-700 leading-relaxed mt-3 space-y-1.5 list-disc pl-6">
+            <li>Article mentionnant <strong>une des 23 municipalités de la MRC d'Abitibi-Ouest</strong> ou « Abitibi-Ouest » → <strong>affiché</strong></li>
+            <li>Article venant directement d'une source 100 % locale (Ville de La Sarre, MRC AO, CSSLA, École de musique AO) → <strong>toujours affiché</strong></li>
+            <li>Article mentionnant <strong>uniquement</strong> une autre MRC (Amos, Val-d'Or, Rouyn-Noranda, Témiscamingue…) sans aucune mention de l'A-O → <strong>masqué</strong></li>
+            <li>Article général ou provincial (politique, économie, etc.) → <strong>affiché par défaut</strong></li>
+          </ul>
+          <p class="text-gray-700 leading-relaxed mt-3">
+            Vous pouvez désactiver le filtre à tout moment en décochant la case « Filtre Abitibi-Ouest » sur la page Nouvelles.
+          </p>
+        </div>
+      </section>
+
+      <!-- Personnalisation -->
+      <section>
+        <h2 class="text-2xl font-extrabold text-gray-900 mb-4">Personnalisation</h2>
+        <div class="prose prose-gray max-w-none">
+          <p class="text-gray-700 leading-relaxed">
+            Chaque visiteur peut choisir quels widgets afficher ou masquer via le bouton <strong>« Personnaliser »</strong>
+            en haut de la page. Vos préférences sont sauvegardées localement dans votre navigateur (localStorage) —
+            aucune donnée n'est envoyée à nos serveurs. Si vous changez de navigateur ou videz vos données,
+            tous les widgets réapparaissent.
+          </p>
+        </div>
+      </section>
+
+      <!-- Limites -->
+      <section>
+        <h2 class="text-2xl font-extrabold text-gray-900 mb-4">Limites connues</h2>
+        <ul class="text-gray-700 leading-relaxed space-y-3 list-disc pl-6">
+          <li><strong>Pas de temps réel parfait.</strong> La fréquence la plus rapide est de 2 heures. Pour une panne d'électricité en cours, consultez Hydro-Québec directement.</li>
+          <li><strong>Les sites peuvent changer.</strong> Si une source modifie la structure de son site, notre extracteur peut temporairement ne plus fonctionner. Nous corrigeons dès que possible.</li>
+          <li><strong>Les niveaux d'eau des petites rivières</strong> (Rivière La Sarre, Duparquet, Macamic) ne sont pas disponibles en temps réel — leurs données ne sont pas publiées par le CEHQ via API. Nous utilisons les stations les plus proches disponibles.</li>
+          <li><strong>Le prix de l'essence</strong> peut avoir jusqu'à 5 minutes de retard côté Régie + 12 heures de retard de notre côté entre deux mises à jour. Pour le prix exact en temps réel, demandez à la station.</li>
+          <li><strong>Les filtres de pertinence</strong> sont basés sur des mots-clés. Ils peuvent occasionnellement masquer un article pertinent ou en laisser passer un qui ne l'est pas — n'hésitez pas à désactiver le filtre Abitibi-Ouest ou à nous signaler un article hors sujet.</li>
+          <li><strong>Le transport scolaire</strong> dépend du site du CSS du Lac-Abitibi. Si leur site est en maintenance, l'alerte ne sera pas captée. En cas de doute, appelez l'école directement.</li>
+        </ul>
+      </section>
+
+      <!-- Confidentialité / Données -->
+      <section>
+        <h2 class="text-2xl font-extrabold text-gray-900 mb-4">Et vos données?</h2>
+        <p class="text-gray-700 leading-relaxed">
+          Aucune donnée personnelle n'est collectée sur cette page, sauf si vous remplissez le formulaire de suggestions
+          (nom + courriel optionnel + message). Ces informations sont stockées sur notre base Supabase et utilisées
+          uniquement pour répondre à votre message ou améliorer le site. Nous ne les revendons à personne.
+        </p>
+      </section>
+
+      <!-- Contact / Erreur -->
+      <section class="bg-white border border-gray-200 rounded-xl p-6">
+        <h2 class="text-xl font-extrabold text-gray-900 mb-2">Vu une erreur? Une source à ajouter?</h2>
+        <p class="text-gray-700 leading-relaxed mb-4">
+          Faites-nous signe via le formulaire « Vos suggestions » au bas du
+          <a href="/nouvelles" class="text-cjeao-darker font-semibold underline">tableau de bord</a>, ou écrivez-nous directement.
+        </p>
+        <a href="/contact" class="inline-flex items-center gap-2 px-4 py-2 bg-cjeao text-dark font-semibold rounded-lg hover:shadow-[0_0_20px_rgba(0,255,110,0.3)] transition-all text-sm">
+          Nous contacter
+        </a>
+      </section>
+
+    </div>
+  </main>
+
+</BaseLayout>

@@ -1,0 +1,103 @@
+---
+import '../styles/global.css';
+import SEO from '../components/SEO.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import CookieBanner from '../components/CookieBanner.astro';
+
+interface Props {
+  title: string;
+  description?: string;
+  image?: string;
+}
+
+const { title, description, image } = Astro.props;
+---
+
+<!doctype html>
+<html lang="fr-CA">
+  <head>
+    <SEO title={title} description={description} image={image} />
+    <!-- Sentry (erreurs seulement) — actif uniquement si PUBLIC_SENTRY_DSN est défini -->
+    <script>
+      import * as Sentry from '@sentry/browser';
+      const dsn = import.meta.env.PUBLIC_SENTRY_DSN;
+      if (dsn) {
+        Sentry.init({
+          dsn,
+          environment: import.meta.env.MODE,
+          tracesSampleRate: 0,
+          replaysSessionSampleRate: 0,
+          replaysOnErrorSampleRate: 0,
+        });
+      }
+    </script>
+  </head>
+  <body class="min-h-screen flex flex-col">
+    <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-cjeao focus:text-dark focus:font-semibold focus:rounded-lg">
+      Passer au contenu
+    </a>
+    <Header />
+    <main id="main" class="flex-1">
+      <slot />
+    </main>
+    <Footer />
+    <CookieBanner />
+
+    <!-- Scroll effects: reveal, header hide/show, parallax -->
+    <script>
+      // Scroll Reveal
+      const srObserver = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const delay = entry.target.getAttribute('data-sr-delay');
+            if (delay) {
+              (entry.target as HTMLElement).style.transitionDelay = `${delay}ms`;
+            }
+            entry.target.classList.add('revealed');
+            srObserver.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+      document.querySelectorAll('[data-sr]').forEach((el) => srObserver.observe(el));
+
+      // Header hide/show on scroll
+      let lastScrollY = window.scrollY;
+      const header = document.querySelector('header');
+
+      window.addEventListener('scroll', () => {
+        const currentY = window.scrollY;
+        if (header) {
+          if (currentY > lastScrollY && currentY > 100) {
+            header.classList.add('header--hidden');
+          } else {
+            header.classList.remove('header--hidden');
+          }
+        }
+        lastScrollY = currentY;
+      }, { passive: true });
+
+      // Parallax
+      const parallaxEls = document.querySelectorAll<HTMLElement>('[data-parallax]');
+      if (parallaxEls.length) {
+        let ticking = false;
+        window.addEventListener('scroll', () => {
+          if (!ticking) {
+            requestAnimationFrame(() => {
+              const scrollY = window.scrollY;
+              parallaxEls.forEach((el) => {
+                const speed = parseFloat(el.getAttribute('data-parallax') || '0.1');
+                const rect = el.getBoundingClientRect();
+                const offset = (rect.top + scrollY - window.innerHeight / 2) * speed;
+                el.style.transform = `translateY(${offset}px)`;
+              });
+              ticking = false;
+            });
+            ticking = true;
+          }
+        }, { passive: true });
+      }
+    </script>
+  </body>
+</html>

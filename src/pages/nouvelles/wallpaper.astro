@@ -1,0 +1,258 @@
+---
+// Page wallpaper : layout plein écran sans nav ni footer, conçu pour Plash, Lively, etc.
+// Auto-refresh des données aux 5 min + re-render du proxy aux 60 secondes côté client.
+import '../../styles/global.css';
+---
+
+<!DOCTYPE html>
+<html lang="fr-CA">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=1920,initial-scale=1" />
+  <title>CJEAO — Tableau de bord (wallpaper)</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <meta http-equiv="refresh" content="600" />
+  <link rel="icon" type="image/png" href="/icon-192.png" />
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100vh;
+      overflow: hidden;
+      background: #0f1929;
+      color: #fff;
+      font-family: 'Raleway', system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    .grain::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='.4'/%3E%3C/svg%3E");
+      opacity: .03;
+      pointer-events: none;
+      z-index: 1;
+    }
+  </style>
+</head>
+<body class="grain">
+
+<div class="relative z-10 w-screen h-screen flex flex-col p-8 lg:p-12">
+
+  <!-- Header : tag + horloge XXL -->
+  <header class="flex items-end justify-between mb-6">
+    <div>
+      <p class="font-mono text-sm font-bold tracking-[0.2em] text-cjeao uppercase">CJEAO · Tableau de bord</p>
+      <p id="date" class="text-2xl text-gray-300 capitalize mt-1">…</p>
+    </div>
+    <div id="heure" class="text-7xl lg:text-9xl font-extrabold text-white tabular-nums tracking-tighter leading-none">--:--</div>
+  </header>
+
+  <!-- Grille principale 2 colonnes -->
+  <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-0">
+
+    <!-- Col gauche : 4 widgets clés -->
+    <section class="lg:col-span-7 grid grid-cols-2 gap-4">
+      <div id="w-meteo" class="bg-white/[0.04] backdrop-blur border border-white/10 rounded-2xl p-5 flex flex-col gap-1">
+        <div class="text-xs font-bold uppercase tracking-wider text-cjeao mb-1">Météo</div>
+        <div class="text-gray-400 text-sm">Chargement…</div>
+      </div>
+      <div id="w-routes" class="bg-white/[0.04] backdrop-blur border border-white/10 rounded-2xl p-5 flex flex-col gap-1">
+        <div class="text-xs font-bold uppercase tracking-wider text-cjeao mb-1">Routes</div>
+        <div class="text-gray-400 text-sm">Chargement…</div>
+      </div>
+      <div id="w-urgences" class="bg-white/[0.04] backdrop-blur border border-white/10 rounded-2xl p-5 flex flex-col gap-1">
+        <div class="text-xs font-bold uppercase tracking-wider text-cjeao mb-1">Urgences</div>
+        <div class="text-gray-400 text-sm">Chargement…</div>
+      </div>
+      <div id="w-essence-or" class="bg-white/[0.04] backdrop-blur border border-white/10 rounded-2xl p-5 flex flex-col gap-1">
+        <div class="text-xs font-bold uppercase tracking-wider text-cjeao mb-1">Essence · Or · USD</div>
+        <div class="text-gray-400 text-sm">Chargement…</div>
+      </div>
+    </section>
+
+    <!-- Col droite : alertes + news -->
+    <section class="lg:col-span-5 flex flex-col gap-4 min-h-0">
+      <div id="w-alertes" class="bg-white/[0.04] backdrop-blur border border-white/10 rounded-2xl p-5 flex flex-col gap-1">
+        <div class="text-xs font-bold uppercase tracking-wider text-cjeao mb-1">Alertes · SOPFEU · Hydro</div>
+        <div class="text-gray-400 text-sm">Chargement…</div>
+      </div>
+      <div id="w-news" class="bg-white/[0.04] backdrop-blur border border-white/10 rounded-2xl p-5 flex-1 flex flex-col gap-2 min-h-0 overflow-hidden">
+        <div class="text-xs font-bold uppercase tracking-wider text-cjeao mb-1">Dernières nouvelles</div>
+        <div class="text-gray-400 text-sm">Chargement…</div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer minimal -->
+  <footer class="flex items-center justify-between text-xs text-gray-500 mt-6">
+    <span>cjeao.qc.ca/nouvelles</span>
+    <span id="maj-status">Données mises à jour aux 5 min</span>
+  </footer>
+
+</div>
+
+<script is:inline>
+  const WMO = {0:['☀️','Ensoleillé'],1:['🌤️','Peu nuageux'],2:['⛅','Partiellement nuageux'],3:['☁️','Nuageux'],45:['🌫️','Brouillard'],48:['🌫️','Brouillard givrant'],51:['🌧️','Bruine légère'],53:['🌧️','Bruine'],55:['🌧️','Bruine forte'],61:['🌧️','Pluie légère'],63:['🌧️','Pluie'],65:['🌧️','Forte pluie'],71:['❄️','Neige légère'],73:['❄️','Neige'],75:['❄️','Forte neige'],77:['❄️','Grésil'],80:['🌦️','Averses légères'],81:['🌦️','Averses'],82:['🌦️','Fortes averses'],85:['❄️','Averses de neige'],86:['❄️','Fortes averses de neige'],95:['⛈️','Orage'],96:['⛈️','Orage grêle'],99:['⛈️','Fort orage grêle']};
+  const SOURCES = {'radio-canada':'Radio-Canada','tva-abitibi':'TVA Abitibi','ville-lasarre':'La Sarre','avis-lasarre':'Avis La Sarre','mrcao':'MRC AO','cssla':'CSSLA','cisss-at':'CISSS-AT','mon-abitibi':'Mon Abitibi','indice-bohemien':'Indice bohémien','uqat':'UQAT','le-citoyen':'Le Citoyen','ecole-musique-ao':'École musique AO','orezone':'Orezone'};
+
+  function escapeHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+
+  function tickClock() {
+    const now = new Date();
+    document.getElementById('heure').textContent = now.toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit', hour12: false });
+    document.getElementById('date').textContent = now.toLocaleDateString('fr-CA', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  }
+  tickClock();
+  setInterval(tickClock, 5000);
+
+  function nomCourtUrgence(e) {
+    return e.nom_court || (e.nom ?? '').replace(/^CENTRE.*(LA SARRE|AMOS|ROUYN-NORANDA|VAL-D'?OR).*/i, '$1').replace(/^HÔPITAL D[E']? /i, '').toLowerCase().replace(/\b\w/g, c => c.toUpperCase()).replace(/-D'/g, "-d'");
+  }
+
+  function tauxColor(t) {
+    if (t == null) return 'text-gray-300';
+    if (t < 85) return 'text-cjeao';
+    if (t < 120) return 'text-yellow-300';
+    if (t < 150) return 'text-orange-300';
+    return 'text-red-400';
+  }
+
+  function etatRouteColor(e) {
+    if (!e) return 'text-gray-300';
+    const el = e.toLowerCase();
+    if (el.includes('dégag')) return 'text-cjeao';
+    if (el.includes('entrav') || el.includes('fermé')) return 'text-red-300';
+    return 'text-yellow-300';
+  }
+
+  async function chargerDonnees() {
+    try {
+      const res = await fetch('/.netlify/functions/nouvelles-proxy', { cache: 'no-store' });
+      const d = await res.json();
+
+      // ── Météo ─────────────────────────────────────────
+      if (d.meteo) {
+        const [icon, desc] = WMO[d.meteo.code_meteo] || ['🌡️','—'];
+        document.getElementById('w-meteo').innerHTML = `
+          <div class="text-xs font-bold uppercase tracking-wider text-cjeao mb-1">Météo · La Sarre</div>
+          <div class="flex items-center gap-4">
+            <div class="text-7xl leading-none">${icon}</div>
+            <div class="text-6xl font-extrabold tabular-nums">${Math.round(d.meteo.temperature)}°C</div>
+          </div>
+          <div class="text-lg text-gray-200 mt-2">${desc}</div>
+          <div class="text-sm text-gray-400">Vent ${d.meteo.vent_kmh ?? '—'} km/h · Humidité ${d.meteo.humidite ?? '—'}%</div>
+        `;
+      }
+
+      // ── Routes ────────────────────────────────────────
+      if (d.routes && Array.isArray(d.routes.routes)) {
+        const rows = d.routes.routes.map(r =>
+          `<div class="flex items-baseline justify-between text-base py-1 border-b border-white/5 last:border-0">
+            <span class="font-semibold">Route ${r.numero}</span>
+            <span class="${etatRouteColor(r.etat)} text-sm">${escapeHtml(r.etat ?? '—')}</span>
+          </div>`
+        ).join('');
+        document.getElementById('w-routes').innerHTML = `
+          <div class="text-xs font-bold uppercase tracking-wider text-cjeao mb-2">Routes</div>
+          ${rows}
+        `;
+      }
+
+      // ── Urgences ──────────────────────────────────────
+      if (d.urgences && Array.isArray(d.urgences.etablissements)) {
+        const etabs = d.urgences.etablissements.slice(0, 4);
+        const rows = etabs.map(e =>
+          `<div class="flex items-baseline justify-between text-base py-1 border-b border-white/5 last:border-0">
+            <span class="font-semibold">${escapeHtml(nomCourtUrgence(e))}</span>
+            <span class="${tauxColor(e.taux_occupation)} text-lg font-bold tabular-nums">${e.taux_occupation ?? '—'}%</span>
+          </div>`
+        ).join('');
+        document.getElementById('w-urgences').innerHTML = `
+          <div class="text-xs font-bold uppercase tracking-wider text-cjeao mb-2">Urgences</div>
+          ${rows}
+        `;
+      }
+
+      // ── Essence + Or + USD ────────────────────────────
+      if (d.essence || d.finances) {
+        const e = d.essence ?? {};
+        const f = d.finances ?? {};
+        const orVar = f.or_variation_pct ?? 0;
+        const orColor = orVar >= 0 ? 'text-cjeao' : 'text-red-400';
+        document.getElementById('w-essence-or').innerHTML = `
+          <div class="text-xs font-bold uppercase tracking-wider text-cjeao mb-2">Essence · Or · USD</div>
+          <div class="grid grid-cols-2 gap-3 mt-1">
+            <div>
+              <div class="text-xs text-gray-400">Régulier</div>
+              <div class="text-3xl font-extrabold tabular-nums">${e.prix_regulier ?? '—'}<span class="text-base text-gray-300"> ¢/L</span></div>
+            </div>
+            <div>
+              <div class="text-xs text-gray-400">Diesel</div>
+              <div class="text-3xl font-extrabold tabular-nums">${e.prix_diesel ?? '—'}<span class="text-base text-gray-300"> ¢/L</span></div>
+            </div>
+            <div>
+              <div class="text-xs text-gray-400">Or (CA)</div>
+              <div class="text-2xl font-extrabold tabular-nums">${f.or_cad_oz ? Math.round(f.or_cad_oz).toLocaleString('fr-CA') : '—'}<span class="text-sm text-gray-300"> $</span></div>
+              <div class="text-xs ${orColor}">${orVar >= 0 ? '+' : ''}${orVar}%</div>
+            </div>
+            <div>
+              <div class="text-xs text-gray-400">USD / CAD</div>
+              <div class="text-2xl font-extrabold tabular-nums">${f.taux_usd_cad ?? '—'}</div>
+            </div>
+          </div>
+        `;
+      }
+
+      // ── Alertes + SOPFEU + Hydro ──────────────────────
+      const alertsCount = d.alertes?.nb_alertes ?? 0;
+      const hydroPannes = d.hydro?.pannes_actives ?? 0;
+      const sopfeu = d.sopfeu;
+      let alertesContent = '';
+      if (alertsCount > 0) {
+        alertesContent += `<div class="mb-2"><span class="text-3xl font-extrabold text-red-400">${alertsCount}</span> <span class="text-sm text-gray-300">alerte${alertsCount !== 1 ? 's' : ''} météo active${alertsCount !== 1 ? 's' : ''}</span></div>`;
+      } else {
+        alertesContent += `<div class="text-cjeao font-bold text-sm">✓ Aucune alerte météo</div>`;
+      }
+      if (sopfeu && sopfeu.saison_active) {
+        alertesContent += `<div class="text-sm mt-1">SOPFEU : <span class="font-semibold text-yellow-200">${escapeHtml(sopfeu.niveau_danger ?? '—')}</span></div>`;
+      }
+      alertesContent += hydroPannes > 0
+        ? `<div class="text-sm mt-1">Hydro-Québec : <span class="text-red-300 font-semibold">${hydroPannes} panne${hydroPannes !== 1 ? 's' : ''}</span></div>`
+        : `<div class="text-sm mt-1">Hydro-Québec : <span class="text-cjeao">✓ Normal</span></div>`;
+      document.getElementById('w-alertes').innerHTML = `
+        <div class="text-xs font-bold uppercase tracking-wider text-cjeao mb-2">Alertes · SOPFEU · Hydro</div>
+        ${alertesContent}
+      `;
+
+      // ── News (6 derniers) ─────────────────────────────
+      if (Array.isArray(d.articles) && d.articles.length > 0) {
+        const items = d.articles.slice(0, 6).map(a => {
+          const src = SOURCES[a.source] || a.source;
+          return `<div class="border-b border-white/5 pb-2 last:border-0">
+            <div class="text-xs text-cjeao font-bold uppercase tracking-wide">${escapeHtml(src)}</div>
+            <div class="text-sm font-semibold leading-snug mt-0.5">${escapeHtml(a.titre || '')}</div>
+          </div>`;
+        }).join('');
+        document.getElementById('w-news').innerHTML = `
+          <div class="text-xs font-bold uppercase tracking-wider text-cjeao mb-1 shrink-0">Dernières nouvelles</div>
+          <div class="flex flex-col gap-2 overflow-hidden">${items}</div>
+        `;
+      }
+
+      const maj = document.getElementById('maj-status');
+      if (maj) maj.textContent = `Dernière sync : ${new Date().toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' })}`;
+    } catch (err) {
+      console.error('[wallpaper]', err);
+    }
+  }
+
+  chargerDonnees();
+  setInterval(chargerDonnees, 5 * 60 * 1000); // toutes les 5 minutes
+</script>
+
+</body>
+</html>

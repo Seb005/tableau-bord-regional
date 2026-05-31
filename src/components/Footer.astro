@@ -1,0 +1,43 @@
+---
+import site from '../data/site.json';
+---
+
+<footer class="bg-dark text-white grain">
+  <div class="h-px bg-gradient-to-r from-transparent via-cjeao/50 to-transparent" />
+
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div>
+        <h3 class="font-mono font-bold text-[0.85rem] uppercase tracking-widest text-cjeao mb-3">À propos</h3>
+        <p class="text-gray-400 text-sm leading-relaxed">{site.description}</p>
+      </div>
+
+      <div>
+        <h3 class="font-mono font-bold text-[0.85rem] uppercase tracking-widest text-cjeao mb-3">Tableau de bord</h3>
+        <ul class="space-y-2 text-sm">
+          <li><a href="/nouvelles" class="text-gray-300 hover:text-cjeao transition-colors">Accueil</a></li>
+          <li><a href="/nouvelles/archives" class="text-gray-300 hover:text-cjeao transition-colors">Archives</a></li>
+          <li><a href="/nouvelles/methodologie" class="text-gray-300 hover:text-cjeao transition-colors">Méthodologie</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h3 class="font-mono font-bold text-[0.85rem] uppercase tracking-widest text-cjeao mb-3">Projet</h3>
+        <ul class="space-y-2 text-sm">
+          <li><a href={site.repo} target="_blank" rel="noopener noreferrer" class="text-gray-300 hover:text-cjeao transition-colors">Code source (GitHub) ↗</a></li>
+          <li><a href={site.demo} target="_blank" rel="noopener noreferrer" class="text-gray-300 hover:text-cjeao transition-colors">Instance de démonstration ↗</a></li>
+          <li><a href={`mailto:${site.organization.email}`} class="text-gray-300 hover:text-cjeao transition-colors">{site.organization.email}</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="border-t border-white/[0.06]">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-2 text-gray-400 text-xs">
+        <span>&copy; {new Date().getFullYear()} {site.organization.name} — Licence MIT</span>
+        <span>Projet libre adapté à {site.region}</span>
+      </div>
+    </div>
+  </div>
+</footer>

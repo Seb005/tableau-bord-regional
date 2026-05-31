@@ -1,0 +1,110 @@
+---
+interface Props {
+  title: string;
+  description?: string;
+  image?: string;
+  canonicalURL?: string;
+}
+
+import site from '../data/site.json';
+
+const {
+  title,
+  description = site.description,
+  image = '/images/og-default.jpg',
+  canonicalURL = Astro.url.href,
+} = Astro.props;
+
+const fullTitle = title === 'Accueil'
+  ? `${site.shortName} — ${site.name}`
+  : `${title} — ${site.shortName}`;
+
+const GA4_ID = import.meta.env.PUBLIC_GA4_ID;
+const FB_PIXEL_ID = import.meta.env.PUBLIC_FB_PIXEL_ID;
+const FB_APP_ID = import.meta.env.PUBLIC_FB_APP_ID;
+const PLAUSIBLE_SCRIPT = import.meta.env.PUBLIC_PLAUSIBLE_SCRIPT_URL;
+const GOOGLE_SITE_VERIFICATION = import.meta.env.PUBLIC_GOOGLE_SITE_VERIFICATION;
+---
+
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>{fullTitle}</title>
+<meta name="description" content={description} />
+<link rel="canonical" href={canonicalURL} />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="icon" type="image/png" href="/favicon.png" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+<!-- PWA -->
+<link rel="manifest" href="/manifest.webmanifest" />
+<meta name="theme-color" content="#1a2840" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content={site.shortName} />
+<meta name="mobile-web-app-capable" content="yes" />
+
+<!-- Open Graph -->
+{FB_APP_ID && <meta property="fb:app_id" content={FB_APP_ID} />}
+<meta property="og:type" content="website" />
+<meta property="og:url" content={canonicalURL} />
+<meta property="og:title" content={fullTitle} />
+<meta property="og:description" content={description} />
+<meta property="og:image" content={new URL(image, Astro.site || Astro.url.origin)} />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:locale" content="fr_CA" />
+<meta property="og:site_name" content={site.name} />
+
+<!-- Twitter Cards -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={fullTitle} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={new URL(image, Astro.site || Astro.url.origin)} />
+
+{GOOGLE_SITE_VERIFICATION && <meta name="google-site-verification" content={GOOGLE_SITE_VERIFICATION} />}
+
+{(GA4_ID || FB_PIXEL_ID) && (
+  <script is:inline define:vars={{ GA4_ID, FB_PIXEL_ID }}>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    function loadGA4() {
+      if (!GA4_ID) return;
+      if (document.querySelector('script[src*="googletagmanager"]')) return;
+      var s = document.createElement('script');
+      s.async = true;
+      s.src = 'https://www.googletagmanager.com/gtag/js?id=' + GA4_ID;
+      document.head.appendChild(s);
+      gtag('js', new Date());
+      gtag('config', GA4_ID);
+    }
+    function loadMetaPixel() {
+      if (!FB_PIXEL_ID || window.fbq) return;
+      !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+      n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+      n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+      t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}
+      (window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+      fbq('init', FB_PIXEL_ID);
+      fbq('track', 'PageView');
+    }
+    if (document.cookie.indexOf('site_consent=accepted') !== -1) {
+      loadGA4();
+      loadMetaPixel();
+    }
+  </script>
+)}
+
+{PLAUSIBLE_SCRIPT && (
+  <>
+    <script async src={PLAUSIBLE_SCRIPT}></script>
+    <script is:inline>
+      window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};
+      plausible.init()
+    </script>
+  </>
+)}
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />

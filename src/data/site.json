@@ -1,0 +1,19 @@
+{
+  "name": "Tableau de bord régional",
+  "shortName": "Carrefour",
+  "description": "Tableau de bord d'informations régionales : météo, urgences, routes, finances, emplois, activités, et plus encore.",
+  "region": "Votre région",
+  "organization": {
+    "name": "Votre organisation",
+    "url": "https://example.com",
+    "email": "contact@example.com"
+  },
+  "social": {
+    "facebook": "",
+    "linkedin": "",
+    "instagram": "",
+    "youtube": ""
+  },
+  "repo": "https://github.com/Seb005/tableau-bord-regional",
+  "demo": "https://www.cjeao.qc.ca/nouvelles"
+}

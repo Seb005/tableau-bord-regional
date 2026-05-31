@@ -1,0 +1,18 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(), payment=()"
+    X-XSS-Protection = "1; mode=block"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://connect.facebook.net https://plausible.io; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' https: data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.supabase.co https://www.google-analytics.com https://*.googletagmanager.com https://api.open-meteo.com https://plausible.io https://*.sentry.io; frame-src 'self' https://www.google.com; object-src 'none'"

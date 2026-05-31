@@ -1,0 +1,2227 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import site from '../data/site.json';
+
+const VAPID_PUBLIC_KEY = import.meta.env.PUBLIC_VAPID_PUBLIC_KEY || '';
+const SITE_URL = import.meta.env.PUBLIC_SITE_URL || Astro.url.origin;
+const SHARE_URL = encodeURIComponent(`${SITE_URL}/nouvelles`);
+const SHARE_TEXT = encodeURIComponent(`Tableau de bord de ${site.region}`);
+
+const pageDescription = `Tableau de bord régional de ${site.region} : météo, essence, urgences, routes, pannes, alertes et nouvelles agrégées de sources locales.`;
+---
+
+<BaseLayout
+  title="Nouvelles"
+  description={pageDescription}
+  image="/images/og-nouvelles.png"
+>
+
+  <!-- En-tête fusionné dans la section widgets pour gagner ~30px verticaux -->
+  <section class="bg-dark pt-16 pb-8 lg:pt-18 lg:pb-10 grain">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+
+      <!-- Barre titre + horloge -->
+      <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 mb-3 text-white">
+        <div class="flex items-baseline gap-2">
+          <h1 class="text-3xl lg:text-5xl font-extrabold tracking-tight">Nouvelles</h1>
+          <span class="text-[0.65rem] font-bold uppercase tracking-wider text-cjeao">Tableau de bord</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <button id="btn-personnaliser" type="button" class="inline-flex items-center gap-1.5 px-3 py-2 bg-gray-800 text-gray-300 text-xs font-semibold rounded-lg border border-gray-600 hover:bg-gray-700 hover:text-white transition-all min-h-[40px]">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
+            <span class="hidden sm:inline">Personnaliser</span>
+          </button>
+          <button id="btn-installer" type="button" class="hidden items-center gap-1.5 px-2 py-0.5 bg-cjeao text-dark text-xs font-bold rounded hover:shadow-[0_0_12px_rgba(0,255,110,0.4)] transition-all">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16"/></svg>
+            Installer
+          </button>
+          <button id="btn-alertes" type="button" class="hidden items-center gap-1.5 px-2 py-0.5 bg-amber-500 text-dark text-xs font-bold rounded hover:shadow-[0_0_12px_rgba(245,158,11,0.5)] transition-all" title="Activer les alertes urgentes (inondations, fermetures, etc.)">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+            Alertes
+          </button>
+          <div class="flex items-baseline gap-2 text-xs lg:text-sm">
+            <span id="date-aujourdhui" class="text-gray-200 capitalize">…</span>
+            <span class="text-gray-500">·</span>
+            <span id="heure-aujourdhui" class="text-cjeao font-mono font-semibold tabular-nums">--:--</span>
+            <span id="visiteurs-bloc" class="hidden items-center gap-1.5 text-gray-300 ml-2 pl-2 border-l border-gray-700" title="Visiteurs en ligne en ce moment (Plausible)">
+              <span class="inline-block w-1.5 h-1.5 bg-cjeao rounded-full" style="box-shadow: 0 0 6px #00FF6E; animation: visiteurs-pulse 2s ease-in-out infinite;"></span>
+              <span id="visiteurs-nombre" class="text-cjeao font-semibold tabular-nums">—</span>
+              <span class="text-gray-400 hidden sm:inline">en ligne</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bannière transport scolaire (visible seulement en cas d'alerte) -->
+      <div id="widget-transport" class="hidden mb-3"></div>
+
+      <!-- Row 1: 4 widgets "lourds" -->
+      <div class="widget-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-3" data-cols-sm-max="2" data-cols-lg-max="4">
+        <div id="widget-meteo" class="border border-gray-700 rounded-xl p-3.5 flex flex-col gap-1.5">
+          <div class="animate-pulse space-y-3"><div class="h-4 w-20 bg-gray-700 rounded"></div><div class="h-10 w-24 bg-gray-700 rounded"></div><div class="h-3 w-full bg-gray-700 rounded"></div><div class="h-3 w-2/3 bg-gray-700 rounded"></div></div>
+        </div>
+        <div id="widget-essence" class="border border-gray-700 rounded-xl p-3.5 flex flex-col gap-1.5">
+          <div class="animate-pulse space-y-3"><div class="h-4 w-20 bg-gray-700 rounded"></div><div class="h-10 w-24 bg-gray-700 rounded"></div><div class="h-3 w-full bg-gray-700 rounded"></div><div class="h-3 w-2/3 bg-gray-700 rounded"></div></div>
+        </div>
+        <div id="widget-finances" class="border border-gray-700 rounded-xl p-3.5 flex flex-col gap-1.5">
+          <div class="animate-pulse space-y-3"><div class="h-4 w-20 bg-gray-700 rounded"></div><div class="h-10 w-24 bg-gray-700 rounded"></div><div class="h-3 w-full bg-gray-700 rounded"></div><div class="h-3 w-2/3 bg-gray-700 rounded"></div></div>
+        </div>
+        <div id="widget-urgences" class="border border-gray-700 rounded-xl p-3.5 flex flex-col gap-1.5">
+          <div class="animate-pulse space-y-3"><div class="h-4 w-24 bg-gray-700 rounded"></div><div class="h-3 w-full bg-gray-700 rounded"></div><div class="h-3 w-5/6 bg-gray-700 rounded"></div><div class="h-3 w-3/4 bg-gray-700 rounded"></div></div>
+        </div>
+      </div>
+
+      <!-- Mini-row : 6 widgets compacts (statut en un coup d'œil) -->
+      <div class="widget-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-3" data-cols-base-max="2" data-cols-sm-max="3" data-cols-lg-max="6">
+        <div id="widget-sopfeu" class="widget-mini border border-gray-700 rounded-lg p-2.5 flex flex-col gap-0.5">
+          <div class="animate-pulse space-y-2"><div class="h-3 w-16 bg-gray-700 rounded"></div><div class="h-6 w-20 bg-gray-700 rounded"></div></div>
+        </div>
+        <div id="widget-alertes" class="widget-mini border border-gray-700 rounded-lg p-2.5 flex flex-col gap-0.5">
+          <div class="animate-pulse space-y-2"><div class="h-3 w-20 bg-gray-700 rounded"></div><div class="h-6 w-24 bg-gray-700 rounded"></div></div>
+        </div>
+        <div id="widget-hydro" class="widget-mini border border-gray-700 rounded-lg p-2.5 flex flex-col gap-0.5">
+          <div class="animate-pulse space-y-2"><div class="h-3 w-20 bg-gray-700 rounded"></div><div class="h-6 w-24 bg-gray-700 rounded"></div></div>
+        </div>
+        <div id="widget-bornes" class="widget-mini border border-gray-700 rounded-lg p-2.5 flex flex-col gap-0.5">
+          <div class="animate-pulse space-y-2"><div class="h-3 w-20 bg-gray-700 rounded"></div><div class="h-6 w-20 bg-gray-700 rounded"></div></div>
+        </div>
+        <div id="widget-air" class="widget-mini border border-gray-700 rounded-lg p-2.5 flex flex-col gap-0.5">
+          <div class="animate-pulse space-y-2"><div class="h-3 w-16 bg-gray-700 rounded"></div><div class="h-6 w-16 bg-gray-700 rounded"></div></div>
+        </div>
+        <div id="widget-devises" class="widget-mini border border-gray-700 rounded-lg p-2.5 flex flex-col gap-0.5">
+          <div class="animate-pulse space-y-2"><div class="h-3 w-16 bg-gray-700 rounded"></div><div class="h-3 w-20 bg-gray-700 rounded"></div><div class="h-3 w-20 bg-gray-700 rounded"></div></div>
+        </div>
+      </div>
+
+      <!-- Row 3: 4 widgets "medium" -->
+      <div class="widget-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-3" data-cols-sm-max="2" data-cols-lg-max="4">
+        <div id="widget-routes" class="border border-gray-700 rounded-xl p-3.5 flex flex-col gap-1.5">
+          <div class="animate-pulse space-y-3"><div class="h-4 w-24 bg-gray-700 rounded"></div><div class="h-3 w-full bg-gray-700 rounded"></div><div class="h-3 w-5/6 bg-gray-700 rounded"></div><div class="h-3 w-3/4 bg-gray-700 rounded"></div></div>
+        </div>
+        <div id="widget-aurores" class="border border-gray-700 rounded-xl p-3.5 flex flex-col gap-1.5">
+          <div class="animate-pulse space-y-3"><div class="h-4 w-32 bg-gray-700 rounded"></div><div class="h-8 w-24 bg-gray-700 rounded"></div><div class="h-3 w-3/4 bg-gray-700 rounded"></div></div>
+        </div>
+        <div id="widget-eau" class="border border-gray-700 rounded-xl p-3.5 flex flex-col gap-1.5">
+          <div class="animate-pulse space-y-3"><div class="h-4 w-28 bg-gray-700 rounded"></div><div class="h-3 w-full bg-gray-700 rounded"></div><div class="h-3 w-5/6 bg-gray-700 rounded"></div></div>
+        </div>
+        <div id="widget-internet" class="border border-gray-700 rounded-xl p-3.5 flex flex-col gap-1.5">
+          <div class="animate-pulse space-y-3"><div class="h-4 w-36 bg-gray-700 rounded"></div><div class="h-8 w-24 bg-gray-700 rounded"></div><div class="h-3 w-full bg-gray-700 rounded"></div></div>
+        </div>
+      </div>
+
+      <!-- Row Agenda : pleine largeur, mis en valeur (Loisirs + CCIAO + Carrefour) -->
+      <div class="widget-grid grid grid-cols-1 gap-4 mb-3" data-cols-lg-max="1">
+        <div id="widget-loisirs" class="border border-gray-700 rounded-xl p-4 sm:p-5 flex flex-col gap-2">
+          <div class="animate-pulse space-y-3"><div class="h-4 w-40 bg-gray-700 rounded"></div><div class="grid grid-cols-1 sm:grid-cols-2 gap-2"><div class="h-3 w-full bg-gray-700 rounded"></div><div class="h-3 w-full bg-gray-700 rounded"></div><div class="h-3 w-5/6 bg-gray-700 rounded"></div><div class="h-3 w-5/6 bg-gray-700 rounded"></div></div></div>
+        </div>
+      </div>
+
+      <!-- Banner: Emplois (redesigned) -->
+      <div id="widget-emplois" class="border border-cjeao/30 bg-gradient-to-br from-cjeao/10 to-transparent rounded-xl p-4 sm:p-5 flex flex-col gap-3">
+        <div class="animate-pulse space-y-3"><div class="h-4 w-32 bg-gray-700 rounded"></div><div class="h-8 w-48 bg-gray-700 rounded"></div><div class="h-3 w-full bg-gray-700 rounded"></div></div>
+      </div>
+
+    </div>
+
+    <!-- Modal Personnaliser -->
+    <div id="modal-prefs" class="fixed inset-0 z-50 hidden">
+      <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" id="modal-prefs-backdrop"></div>
+      <div class="relative flex items-center justify-center min-h-full p-4">
+        <div class="bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] overflow-y-auto">
+          <div class="sticky top-0 bg-gray-900 border-b border-gray-700 px-5 py-3.5 flex items-center justify-between rounded-t-2xl z-10">
+            <div>
+              <h3 class="text-lg font-bold text-white">Personnaliser le tableau de bord</h3>
+              <p class="text-xs text-gray-400 mt-0.5">Choisissez les widgets à afficher</p>
+            </div>
+            <button id="modal-prefs-close" class="text-gray-400 hover:text-white transition-colors p-1">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+          <div id="modal-prefs-list" class="px-5 py-3 space-y-1"></div>
+          <div class="sticky bottom-0 bg-gray-900 border-t border-gray-700 px-5 py-3 flex items-center justify-between rounded-b-2xl">
+            <button id="modal-prefs-reset" class="text-xs text-gray-400 hover:text-cjeao transition-colors">Tout réafficher</button>
+            <button id="modal-prefs-done" class="px-4 py-1.5 bg-cjeao text-dark text-sm font-bold rounded-lg hover:shadow-[0_0_12px_rgba(0,255,110,0.3)] transition-all">Terminé</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- Articles section -->
+  <section class="bg-cream py-12 lg:py-16">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+
+      <div class="flex flex-wrap items-baseline justify-between gap-3 mb-6">
+        <div class="flex items-baseline gap-3 flex-wrap">
+          <h2 class="text-2xl lg:text-3xl font-extrabold text-gray-900 tracking-tight">Actualités régionales</h2>
+          <label class="inline-flex items-center gap-2 text-xs text-gray-600 cursor-pointer select-none">
+            <input id="filtre-ao" type="checkbox" checked class="accent-cjeao-darker w-3.5 h-3.5" />
+            <span>Filtre {site.region}</span>
+            <span id="filtre-info" class="text-gray-400"></span>
+          </label>
+        </div>
+        <div class="flex items-center gap-2 text-sm text-gray-400">
+          <span class="text-xs uppercase tracking-wider hidden sm:inline">Partager</span>
+          <a href={`https://twitter.com/intent/tweet?text=${SHARE_TEXT}&url=${SHARE_URL}`}
+             target="_blank" rel="noopener noreferrer" aria-label="Partager sur X (Twitter)" title="Partager sur X (Twitter)"
+             class="w-9 h-9 inline-flex items-center justify-center text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors">
+            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </a>
+          <a href={`https://www.linkedin.com/sharing/share-offsite/?url=${SHARE_URL}`}
+             target="_blank" rel="noopener noreferrer" aria-label="Partager sur LinkedIn" title="Partager sur LinkedIn"
+             class="w-9 h-9 inline-flex items-center justify-center text-gray-400 hover:text-[#0a66c2] hover:bg-gray-100 rounded transition-colors">
+            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.063 2.063 0 112.063 2.065zm1.778 13.019H3.555V9h3.56v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+          </a>
+          <a href={`https://www.facebook.com/sharer/sharer.php?u=${SHARE_URL}`}
+             target="_blank" rel="noopener noreferrer" aria-label="Partager sur Facebook" title="Partager sur Facebook"
+             class="w-9 h-9 inline-flex items-center justify-center text-gray-400 hover:text-[#1877f2] hover:bg-gray-100 rounded transition-colors">
+            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+          </a>
+          <a href={`mailto:?subject=${SHARE_TEXT}&body=${SHARE_URL}`}
+             aria-label="Partager par courriel" title="Partager par courriel"
+             class="w-9 h-9 inline-flex items-center justify-center text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l9 6 9-6M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          </a>
+          <span class="text-gray-300 mx-1">·</span>
+          <a href="/nouvelles/archives" class="text-xs text-gray-500 hover:text-cjeao-darker hover:underline">Archives</a>
+          <a href="/nouvelles/wallpaper" target="_blank" rel="noopener" class="text-xs text-gray-500 hover:text-cjeao-darker hover:underline" title="Version optimisée pour fond d'écran">Wallpaper</a>
+        </div>
+      </div>
+
+      <ul id="articles-list" class="divide-y divide-gray-200 bg-white rounded-xl border border-gray-200 px-3">
+        {/* Skeletons */}
+        {Array.from({ length: 6 }).map(() => (
+          <li class="animate-pulse py-3 space-y-2">
+            <div class="flex items-center justify-between">
+              <div class="h-5 w-24 bg-gray-200 rounded"></div>
+              <div class="h-3 w-16 bg-gray-200 rounded"></div>
+            </div>
+            <div class="h-4 w-full bg-gray-200 rounded"></div>
+            <div class="h-3 w-2/3 bg-gray-200 rounded"></div>
+          </li>
+        ))}
+      </ul>
+
+    </div>
+  </section>
+
+  <!-- Mini-forum / Suggestions -->
+  <section class="bg-white py-10 lg:py-14 border-t border-gray-200">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+
+      <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+
+        <!-- Formulaire -->
+        <div class="lg:col-span-2">
+          <h2 class="text-xl lg:text-2xl font-extrabold text-gray-900 tracking-tight">Suggérer une source</h2>
+          <p class="text-sm text-gray-600 mt-1 mb-5">Une source à ajouter? Une réaction? Dites-nous tout.</p>
+
+          <form id="form-commentaire" class="space-y-3" novalidate>
+            <div>
+              <label for="c-nom" class="block text-sm font-semibold text-gray-700 mb-1">Nom <span class="text-red-500">*</span></label>
+              <input id="c-nom" name="nom" type="text" maxlength="80" required
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:border-cjeao focus:ring-1 focus:ring-cjeao outline-none" />
+            </div>
+            <div>
+              <label for="c-courriel" class="block text-sm font-semibold text-gray-700 mb-1">Courriel <span class="text-gray-400">(optionnel)</span></label>
+              <input id="c-courriel" name="courriel" type="email" maxlength="200"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:border-cjeao focus:ring-1 focus:ring-cjeao outline-none" />
+              <p class="text-xs text-gray-500 mt-1">Pour qu'on puisse vous répondre. Non affiché publiquement.</p>
+            </div>
+            <div>
+              <label for="c-message" class="block text-sm font-semibold text-gray-700 mb-1">Message <span class="text-red-500">*</span></label>
+              <textarea id="c-message" name="message" rows="4" maxlength="1500" required
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:border-cjeao focus:ring-1 focus:ring-cjeao outline-none resize-y"></textarea>
+            </div>
+            {/* Honeypot anti-spam, caché aux humains */}
+            <input type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" class="absolute -left-[9999px] w-px h-px opacity-0" />
+            <div class="flex items-center gap-3">
+              <button type="submit" class="px-4 py-2 bg-cjeao text-dark font-semibold rounded-lg hover:shadow-[0_0_20px_rgba(0,255,110,0.3)] transition-all text-sm">
+                Envoyer
+              </button>
+              <span id="c-status" class="text-sm" aria-live="polite"></span>
+            </div>
+          </form>
+        </div>
+
+        <!-- Liste des commentaires publiés -->
+        <div class="lg:col-span-3">
+          <h2 class="text-xl lg:text-2xl font-extrabold text-gray-900 tracking-tight">Suggestions de la communauté</h2>
+          <p class="text-sm text-gray-600 mt-1 mb-5">Ce que la communauté nous a partagé récemment. <a href="/nouvelles/methodologie" class="text-cjeao-darker hover:underline">Comprendre notre démarche →</a></p>
+
+          <ul id="commentaires-list" class="divide-y divide-gray-200 bg-gray-50 rounded-xl border border-gray-200">
+            <li class="animate-pulse py-3 px-4">
+              <div class="h-4 w-24 bg-gray-200 rounded mb-2"></div>
+              <div class="h-3 w-full bg-gray-200 rounded mb-1"></div>
+              <div class="h-3 w-3/4 bg-gray-200 rounded"></div>
+            </li>
+            <li class="animate-pulse py-3 px-4">
+              <div class="h-4 w-32 bg-gray-200 rounded mb-2"></div>
+              <div class="h-3 w-full bg-gray-200 rounded"></div>
+            </li>
+          </ul>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Sources surveillées -->
+  <section class="bg-gray-100 py-10 lg:py-14 border-t border-gray-200">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+
+      <div class="mb-5 flex flex-wrap items-baseline justify-between gap-3">
+        <div>
+          <h2 class="text-xl lg:text-2xl font-extrabold text-gray-900 tracking-tight">Sources surveillées</h2>
+          <p class="text-sm text-gray-600 mt-1">Les flux que nous consultons pour cette page. Si une source ne publie pas, elle reste tout de même dans la boucle.</p>
+        </div>
+        <a href="/nouvelles/methodologie" class="text-sm text-cjeao-darker hover:underline shrink-0">Comment on récolte l'information →</a>
+      </div>
+
+      <div id="sources-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+
+      <p class="text-xs text-gray-500 mt-6 text-center">
+        Données agrégées automatiquement · Pour décisions critiques, consultez la source officielle ·
+        <a href="/nouvelles/methodologie" class="text-cjeao-darker hover:underline">Méthodologie</a>
+      </p>
+
+    </div>
+  </section>
+
+  <!-- Popup : instructions d'installation iOS -->
+  <dialog id="dialog-ios-install" class="rounded-2xl p-0 max-w-sm w-[90vw] backdrop:bg-black/60">
+    <div class="bg-white">
+      <header class="flex items-center justify-between px-5 py-3 border-b border-gray-200">
+        <h3 class="font-extrabold text-gray-900">Installer sur iPhone</h3>
+        <button type="button" id="dialog-ios-close" aria-label="Fermer" class="text-gray-400 hover:text-gray-900 transition-colors text-2xl leading-none">×</button>
+      </header>
+      <div class="p-5 space-y-4 text-sm">
+        <p class="text-gray-700">Trois petites étapes pour ajouter le tableau de bord sur votre écran d'accueil :</p>
+        <ol class="space-y-3.5">
+          <li class="flex items-start gap-3">
+            <span class="shrink-0 w-7 h-7 rounded-full bg-cjeao text-dark font-bold flex items-center justify-center text-sm">1</span>
+            <div class="flex-1">
+              <p class="text-gray-800">Touchez l'icône <strong>Partager</strong>
+                <svg class="inline-block w-4 h-4 align-text-bottom text-blue-500" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 2L8 6h3v8h2V6h3l-4-4zm-8 9v9c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-9h-2v9H6v-9H4z"/>
+                </svg>
+                en bas de votre écran Safari.</p>
+            </div>
+          </li>
+          <li class="flex items-start gap-3">
+            <span class="shrink-0 w-7 h-7 rounded-full bg-cjeao text-dark font-bold flex items-center justify-center text-sm">2</span>
+            <div class="flex-1">
+              <p class="text-gray-800">Faites défiler et choisissez <strong>« Sur l'écran d'accueil »</strong>
+                <svg class="inline-block w-4 h-4 align-text-bottom text-gray-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                  <rect x="3" y="3" width="7" height="7" rx="1"/>
+                  <rect x="14" y="3" width="7" height="7" rx="1"/>
+                  <rect x="3" y="14" width="7" height="7" rx="1"/>
+                  <line x1="14" y1="17.5" x2="21" y2="17.5"/>
+                  <line x1="17.5" y1="14" x2="17.5" y2="21"/>
+                </svg>
+              </p>
+            </div>
+          </li>
+          <li class="flex items-start gap-3">
+            <span class="shrink-0 w-7 h-7 rounded-full bg-cjeao text-dark font-bold flex items-center justify-center text-sm">3</span>
+            <div class="flex-1">
+              <p class="text-gray-800">Touchez <strong>« Ajouter »</strong> en haut à droite. C'est tout!</p>
+            </div>
+          </li>
+        </ol>
+        <div class="flex items-center gap-3 pt-2 border-t border-gray-100">
+          <button type="button" id="ios-ne-plus-afficher" class="text-xs text-gray-500 hover:text-gray-900 underline">Ne plus afficher</button>
+          <span class="flex-1"></span>
+          <button type="button" id="ios-ok" class="px-3 py-1.5 bg-cjeao text-dark text-sm font-semibold rounded hover:shadow-[0_0_15px_rgba(0,255,110,0.4)] transition-all">Compris</button>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Dialog : opt-in notifications push -->
+  <dialog id="dialog-alertes" class="rounded-2xl p-0 max-w-sm w-[90vw] backdrop:bg-black/60">
+    <div class="bg-white">
+      <header class="flex items-center justify-between px-5 py-3 border-b border-gray-200">
+        <h3 class="font-extrabold text-gray-900 flex items-center gap-2">
+          <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+          Alertes urgentes
+        </h3>
+        <button type="button" id="dialog-alertes-close" aria-label="Fermer" class="text-gray-400 hover:text-gray-900 transition-colors text-2xl leading-none">×</button>
+      </header>
+      <div class="p-5 space-y-4 text-sm">
+        <p class="text-gray-700">Voulez-vous recevoir une notification sur votre téléphone lors d'<strong>alertes urgentes régionales</strong>&nbsp;?</p>
+        <ul class="space-y-1.5 text-gray-700 text-[13px] list-disc list-inside">
+          <li>Avis d'inondation</li>
+          <li>Fermeture de route majeure</li>
+          <li>Panne d'électricité étendue</li>
+          <li>Avis d'ébullition d'eau</li>
+          <li>Évacuations, sinistres</li>
+        </ul>
+        <p class="text-xs text-gray-500 italic">Aucune publicité, aucun spam — uniquement des situations à connaître rapidement.</p>
+        <div id="alertes-ios-help" class="hidden bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-900">
+          <strong>Sur iPhone&nbsp;:</strong> les notifications ne sont disponibles qu'après l'installation du tableau de bord sur l'écran d'accueil.
+        </div>
+        <div id="alertes-erreur" class="hidden bg-red-50 border border-red-200 rounded-lg p-3 text-xs text-red-900"></div>
+        <div class="flex items-center gap-3 pt-2 border-t border-gray-100">
+          <button type="button" id="alertes-plus-tard" class="text-xs text-gray-500 hover:text-gray-900 underline">Plus tard</button>
+          <span class="flex-1"></span>
+          <button type="button" id="alertes-activer" class="px-3 py-1.5 bg-amber-500 text-dark text-sm font-bold rounded hover:shadow-[0_0_15px_rgba(245,158,11,0.5)] transition-all">Activer</button>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Bottom-sheet iOS : prompt d'installation proactif -->
+  <div id="ios-banner" class="hidden fixed bottom-0 left-0 right-0 z-50 px-3 pb-3 pointer-events-none">
+    <div class="pointer-events-auto max-w-md mx-auto bg-dark border border-cjeao/40 rounded-2xl shadow-2xl p-4 flex items-center gap-3" style="box-shadow: 0 -4px 30px rgba(0,255,110,0.15), 0 10px 40px rgba(0,0,0,0.5);">
+      <div class="shrink-0 w-10 h-10 rounded-xl bg-cjeao/20 flex items-center justify-center">
+        <svg class="w-6 h-6 text-cjeao" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+      </div>
+      <div class="flex-1 min-w-0">
+        <p class="text-white font-bold text-sm leading-tight">Recevez les alertes urgentes</p>
+        <p class="text-gray-300 text-xs mt-0.5">Installez Le Carrefour sur votre iPhone (3 étapes).</p>
+      </div>
+      <button type="button" id="ios-banner-cta" class="shrink-0 px-3 py-1.5 bg-cjeao text-dark text-xs font-bold rounded hover:shadow-[0_0_15px_rgba(0,255,110,0.4)] transition-all">Comment&nbsp;?</button>
+      <button type="button" id="ios-banner-close" aria-label="Fermer" class="shrink-0 text-gray-500 hover:text-white text-xl leading-none px-1">×</button>
+    </div>
+  </div>
+
+  <!-- Popup : liste complète des stations d'essence -->
+  <dialog id="dialog-stations" class="rounded-xl p-0 max-w-md w-[90vw] backdrop:bg-black/60">
+    <div class="bg-white">
+      <header class="flex items-center justify-between px-5 py-3 border-b border-gray-200">
+        <h3 class="font-extrabold text-gray-900">Stations d'essence — Abitibi-Ouest</h3>
+        <button type="button" id="dialog-stations-close" aria-label="Fermer" class="text-gray-400 hover:text-gray-900 transition-colors text-2xl leading-none">×</button>
+      </header>
+      <ul id="dialog-stations-list" class="divide-y divide-gray-200 max-h-[60vh] overflow-y-auto"></ul>
+      <footer class="px-5 py-3 border-t border-gray-200 text-xs text-gray-500">
+        Source : Régie de l'énergie du Québec · Trié par prix régulier
+      </footer>
+    </div>
+  </dialog>
+
+</BaseLayout>
+
+<style is:global>
+  @keyframes visiteurs-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+  .animate-pulse-slow {
+    animation: pulse-slow 3s ease-in-out infinite;
+  }
+  @keyframes pulse-slow {
+    0%, 100% { border-color: rgba(239, 68, 68, 0.5); }
+    50% { border-color: rgba(239, 68, 68, 0.9); }
+  }
+  /* Reflow dynamique des grids de widgets quand certains sont masqués via Personnaliser. */
+  .widget-grid[style*="--cols-base"] { grid-template-columns: repeat(var(--cols-base), minmax(0, 1fr)) !important; }
+  @media (min-width: 640px) {
+    .widget-grid[style*="--cols-sm"] { grid-template-columns: repeat(var(--cols-sm), minmax(0, 1fr)) !important; }
+  }
+  @media (min-width: 1024px) {
+    .widget-grid[style*="--cols-lg"] { grid-template-columns: repeat(var(--cols-lg), minmax(0, 1fr)) !important; }
+  }
+</style>
+
+<script is:inline define:vars={{ VAPID_PUBLIC_KEY }}>
+  window.VAPID_PUBLIC_KEY = VAPID_PUBLIC_KEY;
+</script>
+
+<script>
+  // ─── WMO codes ──────────────────────────────────────────────────────────────
+  const WMO_DESC = {
+    0: 'Ensoleillé', 1: 'Peu nuageux', 2: 'Partiellement nuageux', 3: 'Nuageux',
+    45: 'Brouillard', 48: 'Brouillard givrant',
+    51: 'Bruine légère', 53: 'Bruine', 55: 'Bruine forte',
+    61: 'Pluie légère', 63: 'Pluie', 65: 'Forte pluie',
+    71: 'Neige légère', 73: 'Neige', 75: 'Forte neige', 77: 'Grésil',
+    80: 'Averses légères', 81: 'Averses', 82: 'Fortes averses',
+    85: 'Averses de neige', 86: 'Fortes averses de neige',
+    95: 'Orage', 96: 'Orage grêle', 99: 'Fort orage grêle',
+  };
+  const WMO_ICON = {
+    0: '☀️', 1: '🌤️', 2: '⛅', 3: '☁️',
+    45: '🌫️', 48: '🌫️',
+    51: '🌧️', 53: '🌧️', 55: '🌧️',
+    61: '🌧️', 63: '🌧️', 65: '🌧️',
+    71: '❄️', 73: '❄️', 75: '❄️', 77: '❄️',
+    80: '🌦️', 81: '🌦️', 82: '🌦️',
+    85: '❄️', 86: '❄️',
+    95: '⛈️', 96: '⛈️', 99: '⛈️',
+  };
+
+  // ─── Sources ─────────────────────────────────────────────────────────────────
+  const SOURCES = {
+    'radio-canada':   { label: 'Radio-Canada',       color: 'bg-blue-500',    url: 'https://ici.radio-canada.ca/abitibi-temiscamingue',  categorie: 'Média' },
+    'tva-abitibi':    { label: 'TVA Abitibi',        color: 'bg-red-500',     url: 'https://tvaabitibi.ca/',                              categorie: 'Média' },
+    'mon-abitibi':    { label: 'Mon Abitibi',        color: 'bg-yellow-500',  url: 'https://monabitibi.ca/',                              categorie: 'Média' },
+    'le-citoyen':     { label: 'Le Citoyen',         color: 'bg-amber-500',   url: 'https://journallecitoyen.com/',                       categorie: 'Média' },
+    'indice-bohemien':{ label: 'Indice bohémien',    color: 'bg-fuchsia-500', url: 'https://indicebohemien.org/',                         categorie: 'Culture' },
+    'ville-lasarre':  { label: 'Ville de La Sarre',  color: 'bg-green-600',   url: 'https://www.lasarre.ca/actualites/',                  categorie: 'Municipal' },
+    'avis-lasarre':   { label: 'Avis La Sarre',      color: 'bg-emerald-500', url: 'https://citoyen.lasarre.ca/avis',                     categorie: 'Municipal' },
+    'mrcao':          { label: 'MRC Abitibi-Ouest',  color: 'bg-teal-500',    url: 'https://www.mrcao.qc.ca/fr/actualites/',              categorie: 'Municipal' },
+    'cssla':          { label: 'CSSLA',              color: 'bg-orange-500',  url: 'https://cssla.gouv.qc.ca/',                           categorie: 'Éducation' },
+    'uqat':           { label: 'UQAT',               color: 'bg-indigo-500',  url: 'https://www.uqat.ca/nouvelles-et-evenements/',        categorie: 'Éducation' },
+    'cisss-at':       { label: 'CISSS-AT',           color: 'bg-pink-500',    url: 'https://www.cisss-at.gouv.qc.ca/communiques-de-presse/', categorie: 'Santé' },
+    'ecole-musique-ao':{ label: 'École musique AO',  color: 'bg-rose-500',    url: 'https://ecolemusiqueao.ca/nouvelles/',                categorie: 'Culture' },
+    'orezone':        { label: 'Orezone',             color: 'bg-stone-500',   url: 'https://orezone.com/press-releases/',                 categorie: 'Économie' },
+  };
+
+  // ─── Helpers ─────────────────────────────────────────────────────────────────
+  function relativeTime(dateStr) {
+    if (!dateStr) return '';
+    const diff = (Date.now() - new Date(dateStr).getTime()) / 1000 / 3600;
+    if (diff < 1) return 'à l\'instant';
+    if (diff < 24) return `il y a ${Math.round(diff)}h`;
+    return `il y a ${Math.round(diff / 24)}j`;
+  }
+
+  function frDate(dateStr) {
+    if (!dateStr) return '';
+    return new Date(dateStr).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long', year: 'numeric' });
+  }
+
+  function fmtNum(n) {
+    return typeof n === 'number' ? n.toLocaleString('fr-CA') : '—';
+  }
+
+  function extLinkIcon() {
+    return `<svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>`;
+  }
+
+  function widgetLabel(text, href, title) {
+    const linkBit = href
+      ? `<a href="${href}" target="_blank" rel="noopener noreferrer" title="${title || 'Voir la source'}" class="text-gray-400 hover:text-cjeao transition-colors">${extLinkIcon()}</a>`
+      : '';
+    return `<div class="flex items-center justify-between mb-1">
+      <span class="text-xs font-bold text-cjeao tracking-wide uppercase">${text}</span>
+      ${linkBit}
+    </div>`;
+  }
+
+  function misAJour(dateStr) {
+    return `<div class="text-xs text-gray-400 mt-auto pt-1.5">Mis à jour ${relativeTime(dateStr)}</div>`;
+  }
+
+  function miniLabel(text, href, title) {
+    const linkBit = href
+      ? `<a href="${href}" target="_blank" rel="noopener noreferrer" title="${title || 'Voir la source'}" class="text-gray-500 hover:text-cjeao transition-colors shrink-0">${extLinkIcon()}</a>`
+      : '';
+    return `<div class="flex items-center justify-between gap-1 mb-0.5">
+      <span class="text-[0.65rem] font-bold text-cjeao tracking-wide uppercase truncate">${text}</span>
+      ${linkBit}
+    </div>`;
+  }
+
+  // ─── Mini-widget renderers (versions compactes) ───────────────────────────────
+
+  function renderSopfeuMini(d) {
+    const url = 'https://www.sopfeu.qc.ca/carte/';
+    if (!d.saison_active) {
+      return `${miniLabel('Risque feux', url)}<div class="text-sm text-gray-300">Hors saison</div>`;
+    }
+    // Codes couleurs officiels SOPFEU (palette identique à leur carte interactive)
+    const SOPFEU_COLORS = {
+      'Faible':     '#28398a', // bleu foncé (alias historique de "Bas")
+      'Bas':        '#28398a', // bleu foncé
+      'Modéré':     '#80c241', // vert
+      'Élevé':      '#f4ed1f', // jaune vif
+      'Très élevé': '#f7941d', // orange
+      'Extrême':    '#ed1c24', // rouge
+    };
+    const color = SOPFEU_COLORS[d.niveau_danger] ?? '#9ca3af';
+    return `
+      ${miniLabel('Risque feux', url, 'Carte SOPFEU')}
+      <div class="text-xl font-extrabold leading-tight" style="color: ${color}; text-shadow: 0 0 8px ${color}40;">${d.niveau_danger ?? '—'}</div>
+      <div class="text-xs text-gray-400 truncate">${d.feux_actifs ?? 0} feu${(d.feux_actifs ?? 0) !== 1 ? 'x' : ''} actif${(d.feux_actifs ?? 0) !== 1 ? 's' : ''}</div>
+    `;
+  }
+
+  function renderAlertesMini(d) {
+    const url = 'https://meteo.gc.ca/warnings/?prov=qc';
+    const nb = d.nb_alertes ?? 0;
+    if (nb === 0) {
+      return `${miniLabel('Alertes météo', url, 'Avertissements Env. Canada')}<div class="text-xl font-extrabold text-cjeao leading-tight">✓ Aucune</div><div class="text-xs text-gray-400">Aucun avertissement</div>`;
+    }
+    return `${miniLabel('Alertes météo', url)}<div class="text-xl font-extrabold text-red-400 leading-tight">${nb} alerte${nb !== 1 ? 's' : ''}</div><div class="text-xs text-red-300 truncate">${escapeHtml(d.alertes?.[0]?.titre ?? '')}</div>`;
+  }
+
+  function renderHydroMini(d) {
+    const url = 'https://infopannes.solutions.hydroquebec.com/info-pannes/pannes/pannes-en-cours';
+    const ok = (d.pannes_actives ?? 0) === 0;
+    return ok
+      ? `${miniLabel('Hydro-Québec', url, 'Carte des pannes')}<div class="text-xl font-extrabold text-cjeao leading-tight">✓ Normal</div><div class="text-xs text-gray-400">Aucune panne</div>`
+      : `${miniLabel('Hydro-Québec', url, 'Carte des pannes')}<div class="text-xl font-extrabold text-red-400 leading-tight">${d.pannes_actives}</div><div class="text-xs text-gray-300">${fmtNum(d.clients_touches)} client${(d.clients_touches ?? 0) !== 1 ? 's' : ''}</div>`;
+  }
+
+  function renderBornesMini(d) {
+    const url = 'https://lecircuitelectrique.com/trouver-une-borne/';
+    return `${miniLabel('Bornes recharge', url, 'Le Circuit Électrique')}<div class="text-xl font-extrabold text-white leading-tight">${d.total_bornes ?? '—'}</div><div class="text-xs text-gray-400">${(d.bornes?.length ?? 0)} site${(d.bornes?.length ?? 0) !== 1 ? 's' : ''} ≤80 km</div>`;
+  }
+
+  function renderAirMini(d) {
+    const url = 'https://www.environnement.gouv.qc.ca/air/iqa/';
+    const c = (n) => n == null ? 'text-gray-300' : n <= 20 ? 'text-cjeao' : n <= 40 ? 'text-lime-400' : n <= 60 ? 'text-yellow-300' : n <= 80 ? 'text-orange-400' : 'text-red-400';
+    return `${miniLabel('Qualité air', url, "Indice qualité de l'air")}<div class="flex items-baseline gap-2"><span class="text-xl font-extrabold ${c(d.aqi)} leading-tight">${d.aqi ?? '—'}</span><span class="text-xs text-gray-300 truncate">${d.niveau ?? ''}</span></div><div class="text-xs text-gray-400">PM2.5 ${d.pm25 ?? '—'}</div>`;
+  }
+
+  // ─── Widget renderers ─────────────────────────────────────────────────────────
+
+  function renderMeteo(d) {
+    const icon = WMO_ICON[d.code_meteo] ?? '🌡️';
+    const desc = WMO_DESC[d.code_meteo] ?? 'Inconnu';
+    const temp = Math.round(d.temperature);
+    return `
+      ${widgetLabel('Météo', 'https://meteo.gc.ca/fr/location/index.html?coords=48.8,-79.2', 'Prévisions détaillées (Environnement Canada)')}
+      <div class="flex items-center gap-3">
+        <span class="text-5xl leading-none">${icon}</span>
+        <span class="text-4xl font-extrabold text-white">${temp}°C</span>
+      </div>
+      <div class="text-base text-gray-200">${desc}</div>
+      <div class="text-sm text-gray-400">Vent ${d.vent_kmh ?? '—'} km/h · Humidité ${d.humidite ?? '—'}%</div>
+      ${misAJour(d.mis_a_jour)}
+    `;
+  }
+
+  function renderEssence(d) {
+    const fmt = (n) => (typeof n === 'number') ? n.toFixed(1) : '—';
+    window.__toutesStations = Array.isArray(d.toutes_stations) ? d.toutes_stations : [];
+    const nbBtn = window.__toutesStations.length > 0
+      ? `<button type="button" id="btn-voir-stations" class="mt-1 text-xs text-cjeao hover:text-white underline-offset-2 hover:underline transition-colors text-left">Voir les ${window.__toutesStations.length} stations →</button>`
+      : '';
+    return `
+      ${widgetLabel('Essence', 'https://regieessencequebec.ca/', 'Prix sur Régie de l\'énergie du Québec')}
+      <div class="text-xs text-gray-400 -mb-0.5">Le plus bas dans la MRC</div>
+      <div class="text-4xl font-extrabold text-white">${fmt(d.prix_regulier)}<span class="text-xl font-normal text-gray-300">¢</span></div>
+      <div class="text-sm text-gray-200">Diesel <span class="text-white font-semibold">${fmt(d.prix_diesel)}¢</span></div>
+      ${d.prix_regulier_moyen ? `<div class="text-xs text-gray-500">Moy. MRC ${fmt(d.prix_regulier_moyen)}¢ · ${d.nb_stations ?? '—'} stations</div>` : ''}
+      ${nbBtn}
+      ${misAJour(d.mis_a_jour)}
+    `;
+  }
+
+  // Widget Or (gros, dans Row 1) — affiche USD/oz et CAD/oz avec variation 7 jours
+  function renderFinances(d) {
+    const varPct = d.or_variation_pct_7d;
+    const hasVar = varPct != null;
+    const varColor = !hasVar ? 'text-gray-500' : varPct >= 0 ? 'text-cjeao' : 'text-red-400';
+    const varSign  = !hasVar ? '' : varPct >= 0 ? '+' : '';
+    const varTxt   = !hasVar ? '—' : `${varSign}${varPct}%`;
+    return `
+      ${widgetLabel('Or', 'https://www.kitco.com/charts/livegold.html', 'Cours détaillé de l\'or (Kitco)')}
+      <div class="text-3xl font-extrabold text-white">${fmtNum(d.or_cad_oz)}<span class="text-base font-normal text-gray-300"> $CA/oz</span></div>
+      <div class="text-sm text-gray-300">${fmtNum(d.or_usd_oz)}<span class="text-gray-400"> $US/oz</span></div>
+      <div class="${varColor} text-sm font-semibold" title="Variation sur 7 jours">${varTxt} <span class="text-gray-500 font-normal">/ 7j</span></div>
+      ${misAJour(d.mis_a_jour)}
+    `;
+  }
+
+  // Mini-widget Devises (dans la mini-row) — USD/CAD et EUR/CAD avec variations 7j compactes
+  function renderDevisesMini(d) {
+    const url = 'https://www.bankofcanada.ca/rates/exchange/daily-exchange-rates/';
+    const usd = d.taux_usd_cad;
+    const eur = d.taux_eur_cad;
+    const uVar = d.taux_usd_variation_pct_7d;
+    const eVar = d.taux_eur_variation_pct_7d;
+    const fmtVar = (v) => {
+      if (v == null) return '<span class="text-gray-500">—</span>';
+      const color = v >= 0 ? 'text-cjeao' : 'text-red-400';
+      const sign = v >= 0 ? '+' : '';
+      return `<span class="${color}">${sign}${v}%</span>`;
+    };
+    return `
+      ${miniLabel('Devises', url, 'Taux de change · 1 unité étrangère = X CAD · Banque du Canada')}
+      <div class="flex items-baseline justify-between gap-1 text-sm">
+        <span class="text-gray-400 font-medium">USD</span>
+        <span class="text-white font-bold tabular-nums">${usd != null ? Number(usd).toFixed(4) : '—'}</span>
+        <span class="text-[0.65rem] font-semibold" title="Variation 7j">${fmtVar(uVar)}</span>
+      </div>
+      <div class="flex items-baseline justify-between gap-1 text-sm">
+        <span class="text-gray-400 font-medium">EUR</span>
+        <span class="text-white font-bold tabular-nums">${eur != null ? Number(eur).toFixed(4) : '—'}</span>
+        <span class="text-[0.65rem] font-semibold" title="Variation 7j">${fmtVar(eVar)}</span>
+      </div>
+    `;
+  }
+
+  function renderSopfeu(d) {
+    if (!d.saison_active) {
+      return `
+        ${widgetLabel('Risque de feux', 'https://www.sopfeu.qc.ca/carte/', 'Carte interactive SOPFEU')}
+        <div class="text-base text-gray-200 mt-1">Hors saison</div>
+        ${misAJour(d.mis_a_jour)}
+      `;
+    }
+    // Couleurs officielles SOPFEU
+    const SOPFEU_COLORS = {
+      'Faible':     '#28398a',
+      'Bas':        '#28398a',
+      'Modéré':     '#80c241',
+      'Élevé':      '#f4ed1f',
+      'Très élevé': '#f7941d',
+      'Extrême':    '#ed1c24',
+    };
+    const color = SOPFEU_COLORS[d.niveau_danger] ?? '#9ca3af';
+    return `
+      ${widgetLabel('Risque de feux', 'https://www.sopfeu.qc.ca/carte/', 'Carte interactive SOPFEU')}
+      <div class="text-3xl font-extrabold" style="color: ${color}; text-shadow: 0 0 10px ${color}40;">${d.niveau_danger ?? '—'}</div>
+      <div class="text-base text-gray-200">${d.zone ?? ''}</div>
+      <div class="text-sm text-gray-400">${d.feux_actifs ?? 0} feu${(d.feux_actifs ?? 0) !== 1 ? 'x' : ''} actif${(d.feux_actifs ?? 0) !== 1 ? 's' : ''}</div>
+      ${misAJour(d.mis_a_jour)}
+    `;
+  }
+
+  function renderHydro(d) {
+    const ok = (d.pannes_actives ?? 0) === 0;
+    const carteUrl = 'https://infopannes.solutions.hydroquebec.com/info-pannes/pannes/pannes-en-cours';
+    const details = Array.isArray(d.details) ? d.details : [];
+
+    // Liste des pannes par secteur (limitée à 4 pour ne pas surcharger le widget)
+    const pannesList = details.slice(0, 4).map(p => {
+      const debut = p.debut ? relativeTime(p.debut) : '';
+      const majeureBadge = p.panne_majeure
+        ? `<span class="text-[0.65rem] font-semibold uppercase bg-red-500/20 text-red-200 px-1.5 py-0.5 rounded">Majeure</span>`
+        : '';
+      return `<a href="${carteUrl}" target="_blank" rel="noopener noreferrer"
+                 class="group flex items-center justify-between gap-2 text-sm py-1.5 px-2 -mx-2 rounded border-b border-gray-800 last:border-0 hover:bg-gray-800/40 transition-colors"
+                 title="Voir cette panne sur la carte Hydro-Québec">
+        <span class="text-white group-hover:text-cjeao transition-colors flex items-center gap-1.5">
+          ${p.secteur ?? '—'} ${majeureBadge}
+        </span>
+        <span class="flex items-center gap-1.5 text-gray-300">
+          ${debut}
+          <span class="text-gray-500 group-hover:text-cjeao transition-colors">${extLinkIcon()}</span>
+        </span>
+      </a>`;
+    }).join('');
+
+    const surplus = details.length > 4
+      ? `<a href="${carteUrl}" target="_blank" rel="noopener noreferrer" class="text-sm text-gray-300 hover:text-cjeao mt-1">+${details.length - 4} autre${details.length - 4 > 1 ? 's' : ''} sur la carte →</a>`
+      : '';
+
+    return `
+      ${widgetLabel('Hydro-Québec', carteUrl, 'Carte des pannes Hydro-Québec')}
+      ${ok
+        ? `<div class="text-3xl font-extrabold text-cjeao">✓ Normal</div><div class="text-sm text-gray-300">Aucune panne signalée</div>`
+        : `<div class="flex items-baseline gap-3 flex-wrap">
+            <div class="text-3xl font-extrabold text-red-400">${d.pannes_actives} panne${d.pannes_actives !== 1 ? 's' : ''}</div>
+            <div class="text-sm text-gray-200">${fmtNum(d.clients_touches)} client${(d.clients_touches ?? 0) !== 1 ? 's' : ''} touché${(d.clients_touches ?? 0) !== 1 ? 's' : ''}</div>
+          </div>
+          ${pannesList ? `<div class="flex flex-col gap-0 mt-2">${pannesList}</div>` : ''}
+          ${surplus}`
+      }
+      ${misAJour(d.mis_a_jour)}
+    `;
+  }
+
+  function renderRoutes(d) {
+    const routes = d.routes ?? [];
+    const etatColor = (e) => {
+      if (!e) return 'text-gray-400';
+      const el = e.toLowerCase();
+      if (el.includes('dégag')) return 'text-cjeao';
+      if (el.includes('glac') || el.includes('neige') || el.includes('enneig')) return 'text-blue-300';
+      if (el.includes('entrav') || el.includes('fermé')) return 'text-red-400';
+      return 'text-yellow-300';
+    };
+    const routeUrl = (numero) => `https://www.quebec511.info/fr/Diffusion/EtatReseau/Route.aspx?id=${numero}`;
+    const rows = routes.map(r =>
+      `<a href="${routeUrl(r.numero)}" target="_blank" rel="noopener noreferrer"
+          class="group flex items-center justify-between gap-2 text-sm py-1.5 px-2 -mx-2 rounded border-b border-gray-800 last:border-0 hover:bg-gray-800/40 transition-colors"
+          title="Détails et carte de la route ${r.numero}">
+        <span class="text-white font-semibold group-hover:text-cjeao transition-colors">Route ${r.numero}</span>
+        <span class="flex items-center gap-1.5 ${etatColor(r.etat)} font-medium">
+          ${r.etat ?? '—'}
+          <span class="text-gray-500 group-hover:text-cjeao transition-colors">${extLinkIcon()}</span>
+        </span>
+      </a>`
+    ).join('');
+    return `
+      ${widgetLabel('Routes', 'https://www.quebec511.info/fr/Carte/Default.aspx', 'Carte interactive Québec 511')}
+      <div class="flex flex-col gap-0">${rows || '<span class="text-sm text-gray-300">Aucune donnée</span>'}</div>
+      ${misAJour(d.mis_a_jour)}
+    `;
+  }
+
+  function renderAlertes(d) {
+    const nb = d.nb_alertes ?? 0;
+    const url = 'https://meteo.gc.ca/warnings/?prov=qc';
+    if (nb === 0) {
+      return `
+        ${widgetLabel('Alertes météo', url, 'Avertissements Environnement Canada')}
+        <div class="text-3xl font-extrabold text-cjeao">✓ Aucune</div>
+        <div class="text-sm text-gray-300">Aucun avertissement actif</div>
+        ${misAJour(d.mis_a_jour)}
+      `;
+    }
+    const alertes = Array.isArray(d.alertes) ? d.alertes : [];
+    const items = alertes.slice(0, 3).map(a =>
+      `<a href="${url}" target="_blank" rel="noopener noreferrer"
+          class="group flex items-center justify-between gap-2 text-sm py-1.5 px-2 -mx-2 rounded border-b border-gray-800 last:border-0 hover:bg-gray-800/40 transition-colors"
+          title="${a.description ?? ''}">
+        <span class="text-red-200 font-medium group-hover:text-red-100 transition-colors">${a.titre ?? '—'}</span>
+        <span class="text-gray-500 group-hover:text-cjeao transition-colors">${extLinkIcon()}</span>
+      </a>`
+    ).join('');
+    return `
+      ${widgetLabel('Alertes météo', url, 'Avertissements Environnement Canada')}
+      <div class="text-3xl font-extrabold text-red-400">${nb} alerte${nb !== 1 ? 's' : ''}</div>
+      <div class="flex flex-col gap-0 mt-1">${items}</div>
+      ${misAJour(d.mis_a_jour)}
+    `;
+  }
+
+  function renderUrgences(d) {
+    const etabs = Array.isArray(d.etablissements) ? d.etablissements : [];
+    const carteUrl = 'https://www.indexsante.ca/urgences/?region=8';
+    const tauxColor = (t) => {
+      if (t == null) return 'text-gray-400';
+      if (t < 85) return 'text-cjeao';
+      if (t < 120) return 'text-yellow-300';
+      if (t < 150) return 'text-orange-400';
+      return 'text-red-400';
+    };
+
+    // Mapper le nom court de chaque établissement
+    const nomCourt = (e) => e.nom_court
+      || (e.nom ?? '').replace(/^CENTRE.*(LA SARRE|AMOS|ROUYN-NORANDA|VAL-D'?OR|VILLE-MARIE|TÉMISCAMING).*/i, '$1').replace(/^HÔPITAL D[E']? /i, '').toLowerCase().replace(/\b\w/g, c => c.toUpperCase()).replace(/-D'/g, "-d'");
+
+    // La Sarre = en vedette (toujours en premier dans la liste)
+    const laSarre = etabs[0];
+    const autres = etabs.slice(1, 5);
+
+    const vedetteHtml = laSarre ? `
+      <div class="border-b border-gray-700 pb-2 mb-1">
+        <div class="flex items-baseline justify-between gap-2">
+          <span class="text-white font-semibold text-base">${nomCourt(laSarre)}</span>
+          <span class="${tauxColor(laSarre.taux_occupation)} font-bold text-lg">${laSarre.taux_occupation ?? '—'}%</span>
+        </div>
+        <div class="text-xs text-gray-300 mt-0.5">
+          ${laSarre.civieres_occupees ?? '—'}/${laSarre.civieres_fonctionnelles ?? '—'} civ
+          · ${laSarre.patients_en_attente ?? 0} attente
+          ${laSarre.patients_plus_24h ? ` · <span class="text-orange-300">${laSarre.patients_plus_24h} >24h</span>` : ''}
+        </div>
+        ${laSarre.dms_civiere ? `<div class="text-xs text-gray-400">DMS ${laSarre.dms_civiere}</div>` : ''}
+      </div>
+    ` : '';
+
+    const autresRows = autres.map(e =>
+      `<div class="flex items-center justify-between gap-2 text-sm py-1 px-2 -mx-2">
+        <span class="text-gray-200 truncate" title="${e.nom}">${nomCourt(e)}</span>
+        <span class="${tauxColor(e.taux_occupation)} font-semibold shrink-0">${e.taux_occupation ?? '—'}%</span>
+      </div>`
+    ).join('');
+
+    return `
+      ${widgetLabel('Urgences', carteUrl, "Temps d'attente — Index Santé")}
+      ${vedetteHtml}
+      <div class="flex flex-col gap-0">${autresRows || '<span class="text-sm text-gray-300">Aucune donnée</span>'}</div>
+      ${misAJour(d.mis_a_jour)}
+    `;
+  }
+
+  function renderEmplois(d) {
+    const nb = d.nb_offres ?? 0;
+    const top = Array.isArray(d.top_emplois) ? d.top_emplois : [];
+    const portail = 'https://cjeao.jobstat.ca/fr/emplois';
+    const tops = top.slice(0, 5).map(j =>
+      `<a href="${j.url || portail}" target="_blank" rel="noopener noreferrer"
+          class="group flex items-start gap-2 text-sm py-1.5 px-2 -mx-2 rounded hover:bg-white/5 transition-colors">
+        <span class="text-cjeao mt-0.5 shrink-0">&#9654;</span>
+        <span class="flex flex-col min-w-0">
+          <span class="text-white group-hover:text-cjeao transition-colors truncate font-medium">${j.titre ?? '—'}</span>
+          <span class="text-gray-400 text-xs truncate">${j.employeur ?? ''}${j.ville ? ' · ' + j.ville : ''}</span>
+        </span>
+      </a>`
+    ).join('');
+    const btnClass = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors';
+    return `
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-1">
+        <div>
+          ${widgetLabel("Emplois en Abitibi-Ouest", portail, 'Portail Jobstat CJEAO')}
+          <div class="flex items-baseline gap-3">
+            <span class="text-4xl font-extrabold text-cjeao">${nb}</span>
+            <span class="text-base text-gray-200">offre${nb !== 1 ? 's' : ''} active${nb !== 1 ? 's' : ''}</span>
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <a href="${portail}" target="_blank" rel="noopener noreferrer"
+            class="${btnClass} bg-cjeao/20 text-cjeao hover:bg-cjeao/30 border border-cjeao/30">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            Consulter les emplois
+          </a>
+          <a href="https://cjeao.jobstat.ca/fr/compte/employeur/connexion" target="_blank" rel="noopener noreferrer"
+            class="${btnClass} bg-white/10 text-gray-200 hover:bg-white/20 border border-gray-600">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>
+            Ajouter un emploi
+          </a>
+          <a href="https://cjeao.jobstat.ca/fr/compte/candidat/connexion" target="_blank" rel="noopener noreferrer"
+            class="${btnClass} bg-white/10 text-gray-200 hover:bg-white/20 border border-gray-600">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            Créer ma candidature
+          </a>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-0 mt-1">${tops}</div>
+      ${misAJour(d.mis_a_jour)}
+    `;
+  }
+
+  function renderBornes(d) {
+    const total = d.total_bornes ?? 0;
+    const dispo = d.total_disponibles;
+    const bornes = Array.isArray(d.bornes) ? d.bornes : [];
+    const carteUrl = 'https://lecircuitelectrique.com/trouver-une-borne/';
+    const lasarreBornes = bornes.filter(b => /la sarre/i.test(b.ville ?? b.adresse ?? '')).length;
+    const valeurPrincipale = dispo != null
+      ? `<span class="text-white">${dispo}</span><span class="text-gray-300 text-2xl"> / ${total}</span>`
+      : `<span class="text-white">${total}</span>`;
+    return `
+      ${widgetLabel('Bornes électriques', carteUrl, 'Carte Le Circuit Électrique')}
+      <div class="flex items-baseline gap-2">
+        <span class="text-3xl font-extrabold">${valeurPrincipale}</span>
+        <span class="text-sm text-gray-300">${dispo != null ? 'disponibles' : 'prises'}</span>
+      </div>
+      <div class="text-sm text-gray-300">${bornes.length} site${bornes.length !== 1 ? 's' : ''} dans un rayon de 80 km</div>
+      ${lasarreBornes > 0 ? `<div class="text-xs text-gray-400">${lasarreBornes} site${lasarreBornes !== 1 ? 's' : ''} à La Sarre</div>` : ''}
+      ${misAJour(d.mis_a_jour)}
+    `;
+  }
+
+  // Mois français → numéro (1-12), pour parser les dates CCIAO type "15 mars".
+  const MOIS_FR = {
+    'janvier': 1, 'janv': 1, 'jan': 1,
+    'février': 2, 'fevrier': 2, 'févr': 2, 'fevr': 2, 'fev': 2, 'feb': 2,
+    'mars': 3, 'mar': 3,
+    'avril': 4, 'avr': 4, 'apr': 4,
+    'mai': 5,
+    'juin': 6, 'jun': 6,
+    'juillet': 7, 'juil': 7, 'jul': 7,
+    'août': 8, 'aout': 8, 'aoû': 8, 'aug': 8,
+    'septembre': 9, 'sept': 9, 'sep': 9,
+    'octobre': 10, 'oct': 10,
+    'novembre': 11, 'nov': 11,
+    'décembre': 12, 'decembre': 12, 'déc': 12, 'dec': 12,
+  };
+
+  // Parser "YYYY-MM-DD" comme date locale (sinon Date interprète en UTC
+  // et l'heure d'été décale d'un jour avant).
+  function parseDateIsoLocale(s) {
+    if (!s) return null;
+    const [y, m, dd] = String(s).split('-').map(Number);
+    if (!y || !m || !dd) return null;
+    return new Date(y, m - 1, dd);
+  }
+
+  // Parser une date CCIAO "15 mars" (sans année) — l'année est déduite par
+  // rapport à aujourd'hui (si le mois est passé, on prend l'année suivante).
+  function parseDateCciao(s) {
+    if (!s) return null;
+    const parts = String(s).toLowerCase().trim().split(/\s+/);
+    if (parts.length < 2) return null;
+    const jour = parseInt(parts[0], 10);
+    const moisStr = parts[1].replace(/\./g, '');
+    const mois = MOIS_FR[moisStr];
+    if (!jour || !mois) return null;
+    const now = new Date();
+    let annee = now.getFullYear();
+    const candidate = new Date(annee, mois - 1, jour);
+    const aujourdhui = new Date(annee, now.getMonth(), now.getDate());
+    if (candidate < aujourdhui) annee += 1;
+    return new Date(annee, mois - 1, jour);
+  }
+
+  // Source styling pour les pastilles.
+  const SOURCES_AGENDA = {
+    loisirs:   { label: 'Loisirs',  cls: 'bg-blue-500/15 text-blue-300 border-blue-500/30' },
+    cciao:     { label: 'CCIAO',    cls: 'bg-amber-500/15 text-amber-300 border-amber-500/30' },
+    carrefour: { label: 'Carrefour', cls: 'bg-cjeao/15 text-cjeao border-cjeao/30' },
+  };
+
+  // Normalise les 3 sources en un format commun : {source, titre, date (Date), heure, url}.
+  function consoliderAgenda(loisirsData, cciaoData, carrefourActs) {
+    const aujourdhui = new Date();
+    aujourdhui.setHours(0, 0, 0, 0);
+    const items = [];
+
+    // Loisirs (YYYY-MM-DD)
+    const portailLoisirs = 'https://loisirs.ao.ca/fr/';
+    (loisirsData?.activites ?? []).forEach(a => {
+      const dateObj = parseDateIsoLocale(a.date);
+      if (a.date && (!dateObj || dateObj < aujourdhui)) return;
+      items.push({
+        source: 'loisirs',
+        titre: a.titre ?? '—',
+        date: dateObj,
+        heure: a.heure || '',
+        url: a.url || portailLoisirs,
+      });
+    });
+
+    // CCIAO ("15 mars")
+    const portailCciao = 'https://www.cciao.ca/fr/activites/';
+    (cciaoData?.activites ?? []).forEach(a => {
+      const dateObj = parseDateCciao(a.date);
+      if (a.date && (!dateObj || dateObj < aujourdhui)) return;
+      items.push({
+        source: 'cciao',
+        titre: a.titre ?? '—',
+        date: dateObj,
+        heure: '',
+        url: a.url || portailCciao,
+      });
+    });
+
+    // Carrefour (YYYY-MM-DD, heure_debut "HH:MM[:SS]")
+    const portailCarrefour = '/activites';
+    (carrefourActs ?? []).forEach(a => {
+      const dateObj = parseDateIsoLocale(a.date);
+      if (a.date && (!dateObj || dateObj < aujourdhui)) return;
+      const heure = a.heure_debut ? String(a.heure_debut).slice(0, 5) : '';
+      items.push({
+        source: 'carrefour',
+        titre: a.titre ?? '—',
+        date: dateObj,
+        heure,
+        url: portailCarrefour,
+      });
+    });
+
+    // Tri par date asc (entrées sans date à la fin)
+    items.sort((x, y) => {
+      if (!x.date && !y.date) return 0;
+      if (!x.date) return 1;
+      if (!y.date) return -1;
+      return x.date - y.date;
+    });
+    return items;
+  }
+
+  // État de l'onglet actif (persisté en mémoire seulement)
+  let agendaFiltreActif = 'tous';
+
+  // Met à jour seulement la liste sans re-rendre tout le widget (préserve les onglets cliqués).
+  function rendreListeAgenda(items) {
+    const liste = document.getElementById('agenda-liste');
+    if (!liste) return;
+    const filtre = agendaFiltreActif;
+    const filtres = filtre === 'tous' ? items : items.filter(i => i.source === filtre);
+    if (filtres.length === 0) {
+      liste.innerHTML = `<div class="col-span-full text-sm text-gray-300 px-2 py-3">Aucune activité à venir pour cette source.</div>`;
+      return;
+    }
+    liste.innerHTML = filtres.slice(0, 12).map(a => {
+      const src = SOURCES_AGENDA[a.source];
+      const dateTxt = a.date
+        ? a.date.toLocaleDateString('fr-CA', { weekday: 'short', day: 'numeric', month: 'short' })
+        : '';
+      const heure = a.heure ? ` ${a.heure}` : '';
+      return `<a href="${a.url}" target="_blank" rel="noopener noreferrer"
+                 class="group flex items-center justify-between gap-2 text-sm py-1.5 px-2 -mx-2 rounded hover:bg-gray-800/40 transition-colors">
+        <span class="flex items-center gap-2 min-w-0">
+          <span class="shrink-0 text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded border ${src.cls}">${src.label}</span>
+          <span class="text-white truncate group-hover:text-cjeao transition-colors">${a.titre}</span>
+        </span>
+        <span class="text-xs text-gray-300 shrink-0">${dateTxt}${heure}</span>
+      </a>`;
+    }).join('');
+  }
+
+  // Branche les onglets sur clic — appelé après render initial.
+  function brancherOngletsAgenda(items) {
+    document.querySelectorAll('[data-agenda-tab]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        agendaFiltreActif = btn.dataset.agendaTab;
+        document.querySelectorAll('[data-agenda-tab]').forEach(b => {
+          const actif = b.dataset.agendaTab === agendaFiltreActif;
+          b.classList.toggle('bg-cjeao', actif);
+          b.classList.toggle('text-dark', actif);
+          b.classList.toggle('text-gray-300', !actif);
+          b.classList.toggle('hover:bg-gray-800', !actif);
+        });
+        rendreListeAgenda(items);
+      });
+    });
+  }
+
+  function renderAgenda(loisirsData, cciaoData, carrefourActs) {
+    const items = consoliderAgenda(loisirsData, cciaoData, carrefourActs);
+    const inscription = 'https://profil.ao.ca/fr/creer/';
+
+    const compteurs = {
+      tous: items.length,
+      loisirs: items.filter(i => i.source === 'loisirs').length,
+      cciao: items.filter(i => i.source === 'cciao').length,
+      carrefour: items.filter(i => i.source === 'carrefour').length,
+    };
+
+    const onglet = (key, label) => {
+      const actif = agendaFiltreActif === key;
+      const cls = actif
+        ? 'bg-cjeao text-dark'
+        : 'text-gray-300 hover:bg-gray-800';
+      return `<button type="button" data-agenda-tab="${key}"
+        class="text-xs font-semibold px-2.5 py-1 rounded-md transition-colors ${cls}">
+        ${label} <span class="opacity-70">${compteurs[key]}</span>
+      </button>`;
+    };
+
+    const ctaInscription = `
+      <a href="${inscription}" target="_blank" rel="noopener noreferrer"
+         class="inline-flex items-center gap-1.5 text-xs font-semibold text-cjeao hover:text-white transition-colors">
+        <span>Inscrivez vos activités</span>
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+      </a>`;
+
+    // Date la plus récente parmi les "mis_a_jour" des sources
+    const majDates = [loisirsData?.mis_a_jour, cciaoData?.mis_a_jour].filter(Boolean);
+    const majRecent = majDates.sort().slice(-1)[0];
+
+    // Render initial (les onglets seront branchés juste après)
+    const html = `
+      ${widgetLabel('Agenda Abitibi-Ouest', 'https://loisirs.ao.ca/fr/', 'Loisirs · CCIAO · Carrefour')}
+      <div class="flex items-center justify-between gap-3 flex-wrap">
+        <div class="flex items-center gap-1 flex-wrap">
+          ${onglet('tous', 'Tous')}
+          ${onglet('loisirs', 'Loisirs')}
+          ${onglet('cciao', 'CCIAO')}
+          ${onglet('carrefour', 'Carrefour')}
+        </div>
+        ${ctaInscription}
+      </div>
+      <div id="agenda-liste" class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-0 mt-1"></div>
+      ${majRecent ? misAJour(majRecent) : ''}
+    `;
+
+    // Stocker les items pour les onglets (différé : on doit attendre que le DOM soit en place)
+    setTimeout(() => {
+      rendreListeAgenda(items);
+      brancherOngletsAgenda(items);
+    }, 0);
+
+    return html;
+  }
+
+  function renderAir(d) {
+    const aqiColor = (n) => {
+      if (n == null) return 'text-gray-300';
+      if (n <= 20) return 'text-cjeao';
+      if (n <= 40) return 'text-lime-400';
+      if (n <= 60) return 'text-yellow-300';
+      if (n <= 80) return 'text-orange-400';
+      return 'text-red-400';
+    };
+    return `
+      ${widgetLabel('Qualité de l\'air', 'https://www.environnement.gouv.qc.ca/air/iqa/', 'Indice qualité de l\'air')}
+      <div class="flex items-baseline gap-3">
+        <span class="text-3xl font-extrabold ${aqiColor(d.aqi)}">${d.aqi ?? '—'}</span>
+        <span class="text-base text-gray-200">${d.niveau ?? ''}</span>
+      </div>
+      <div class="text-sm text-gray-300">PM2.5 ${d.pm25 ?? '—'} · PM10 ${d.pm10 ?? '—'}</div>
+      <div class="text-xs text-gray-400">O₃ ${d.o3 ?? '—'} · NO₂ ${d.no2 ?? '—'}</div>
+      ${misAJour(d.mis_a_jour)}
+    `;
+  }
+
+  function renderAurores(d) {
+    const url = 'https://www.swpc.noaa.gov/products/aurora-30-minute-forecast';
+    const proba = d.probabilite_pct ?? 0;
+    const probaColor = proba >= 60 ? 'text-cjeao' : proba >= 30 ? 'text-yellow-300' : 'text-gray-300';
+    const visible = d.visible_quebec
+      ? `<span class="text-cjeao font-semibold">✓ Possiblement visible</span>`
+      : `<span class="text-gray-400">Peu probable</span>`;
+
+    // Lune
+    const luneEmoji = d.lune_emoji ?? '🌙';
+    const lunePhase = d.lune_phase ?? '';
+    const luneIllum = d.lune_illumination != null ? `${d.lune_illumination}%` : '';
+
+    // Météores
+    let meteoreHtml = '';
+    if (d.meteore_nom) {
+      const estPic = d.meteore_pic_debut && d.meteore_pic_fin && (() => {
+        const now = new Date();
+        const mmdd = `${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        return mmdd >= d.meteore_pic_debut && mmdd <= d.meteore_pic_fin;
+      })();
+      const picBadge = estPic ? ' <span class="text-yellow-300 font-semibold">★ Pic!</span>' : '';
+      meteoreHtml = `<div class="text-sm text-gray-200">☄️ ${d.meteore_nom}${picBadge} · ~${d.meteore_taux_horaire}/h</div>`;
+    }
+
+    return `
+      ${widgetLabel('Ciel nocturne', url, 'Aurores · Lune · Météores')}
+      <div class="flex items-baseline gap-3">
+        <span class="text-2xl font-extrabold ${probaColor}">${proba}%</span>
+        <span class="text-sm text-gray-200">aurores · Kp ${d.kp_index ?? '—'} · ${d.niveau ?? ''}</span>
+      </div>
+      <div class="text-xs">${visible}</div>
+      <div class="text-sm text-gray-200 mt-0.5">${luneEmoji} ${lunePhase}${luneIllum ? ` · ${luneIllum} illuminée` : ''}</div>
+      ${meteoreHtml}
+      ${misAJour(d.mis_a_jour)}
+    `;
+  }
+
+  function renderInternet(d) {
+    const url = 'https://performance.cira.ca/';
+    const fournisseurs = (() => {
+      try { return typeof d.fournisseurs === 'string' ? JSON.parse(d.fournisseurs) : (d.fournisseurs || []); }
+      catch { return []; }
+    })();
+    const comparaison = (() => {
+      try { return typeof d.comparaison_qc === 'string' ? JSON.parse(d.comparaison_qc) : (d.comparaison_qc || {}); }
+      catch { return {}; }
+    })();
+
+    const dl = d.mediane_download_mbps;
+    const ul = d.mediane_upload_mbps;
+    const dlColor = dl >= 50 ? 'text-cjeao' : dl >= 25 ? 'text-yellow-300' : 'text-red-400';
+
+    // Comparaison avec la moyenne QC
+    let compHtml = '';
+    if (comparaison.download_qc_mbps) {
+      const ratio = dl / comparaison.download_qc_mbps;
+      const pct = Math.round((ratio - 1) * 100);
+      if (pct < -5) {
+        compHtml = `<span class="text-red-400">${Math.abs(pct)}% sous la moyenne QC</span>`;
+      } else if (pct > 5) {
+        compHtml = `<span class="text-cjeao">${pct}% au-dessus de la moyenne QC</span>`;
+      } else {
+        compHtml = `<span class="text-gray-300">≈ moyenne du Québec</span>`;
+      }
+    }
+
+    // Top fournisseurs (max 2 — colonne étroite)
+    const top = fournisseurs.slice(0, 2);
+    const faiRows = top.map(f => {
+      const dlVal = f.download_mbps != null ? `↓${f.download_mbps}` : '—';
+      const ulVal = f.upload_mbps != null ? `↑${f.upload_mbps}` : '';
+      return `<div class="flex justify-between text-xs">
+        <span class="text-gray-200 truncate">${f.nom}</span>
+        <span class="text-gray-300 font-mono">${dlVal} ${ulVal}</span>
+      </div>`;
+    }).join('');
+
+    return `
+      ${widgetLabel('Internet en Abitibi-Ouest', url, 'Données M-Lab · CIRA IPT')}
+      <div class="flex items-baseline gap-3">
+        <span class="text-3xl font-extrabold ${dlColor}">${dl ?? '—'}</span>
+        <span class="text-sm text-gray-200">Mbps ↓ médiane</span>
+        ${ul != null ? `<span class="text-sm text-gray-400">· ${ul} Mbps ↑</span>` : ''}
+      </div>
+      ${compHtml ? `<div class="text-xs">${compHtml}</div>` : ''}
+      ${faiRows ? `<div class="mt-1.5 space-y-0.5 border-t border-gray-700 pt-1.5">${faiRows}</div>` : ''}
+      <div class="text-xs text-gray-400 mt-1">${d.nb_tests ?? 0} tests · ${d.periode_jours ?? 180} derniers jours</div>
+      ${misAJour(d.mis_a_jour)}
+    `;
+  }
+
+  function renderTransport(d) {
+    if (!d || !d.alerte) return null;
+    const url = d.source_url || 'https://alertes.csdla.qc.ca/';
+    return `
+      <div class="bg-red-900/60 border border-red-500/50 rounded-xl p-4 flex items-start gap-3 animate-pulse-slow">
+        <div class="text-3xl shrink-0 mt-0.5">🚌</div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 mb-1">
+            <span class="text-xs font-bold text-red-400 uppercase tracking-wide">Transport scolaire — Alerte</span>
+            <a href="${url}" target="_blank" rel="noopener noreferrer" class="text-red-300 hover:text-white transition-colors">${extLinkIcon()}</a>
+          </div>
+          <div class="text-sm text-white font-semibold leading-snug">${d.message || 'Alerte en vigueur — consultez le site du CSS du Lac-Abitibi pour les détails.'}</div>
+          <div class="text-xs text-red-300 mt-1.5">CSS du Lac-Abitibi · ${misAJourInline(d.mis_a_jour)}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  function misAJourInline(dateStr) {
+    if (!dateStr) return '';
+    return `Mis à jour ${relativeTime(dateStr)}`;
+  }
+
+
+  function renderEau(d) {
+    const stations = Array.isArray(d.stations) ? d.stations : [];
+    const url = 'https://www.cehq.gouv.qc.ca/hydrometrie/';
+    if (stations.length === 0) {
+      return `
+        ${widgetLabel('Niveaux d\'eau', url, 'Centre d\'expertise hydrique')}
+        <div class="text-sm text-gray-300">Aucune donnée</div>
+        ${misAJour(d.mis_a_jour)}
+      `;
+    }
+    const rows = stations.slice(0, 4).map(s => {
+      const val = s.debit_m3s != null
+        ? `${s.debit_m3s.toFixed(1)} <span class="text-xs text-gray-400">m³/s</span>`
+        : s.niveau_m != null
+          ? `${s.niveau_m.toFixed(1)} <span class="text-xs text-gray-400">m</span>`
+          : '—';
+      return `<div class="flex items-baseline justify-between gap-2 text-sm py-1 border-b border-gray-800 last:border-0">
+        <span class="text-white truncate" title="${s.nom ?? ''}">${s.riviere ?? s.nom ?? '—'}</span>
+        <span class="font-semibold text-cjeao shrink-0">${val}</span>
+      </div>`;
+    }).join('');
+    return `
+      ${widgetLabel('Niveaux d\'eau', url, 'Centre d\'expertise hydrique')}
+      <div class="flex flex-col gap-0">${rows}</div>
+      ${misAJour(d.mis_a_jour)}
+    `;
+  }
+
+  // ─── Filtre pertinence Abitibi-Ouest ──────────────────────────────────────────
+  // 23 municipalités de la MRC + références A-O explicites
+  const AO_KEYWORDS = [
+    'Abitibi-Ouest', 'MRC AO', 'Lac Abitibi',
+    'La Sarre', 'Macamic', 'Palmarolle', 'Duparquet',
+    'Authier-Nord', 'Authier', 'Chazel', 'Clerval', 'Clermont',
+    'Dupuy', 'Gallichan', 'La Reine', 'Normétal', 'Poularies',
+    'Rapide-Danseur', 'Roquemaure', 'Sainte-Germaine-Boulé',
+    'Sainte-Hélène-de-Mancebourg', 'Saint-Lambert',
+    'Taschereau', 'Val-Saint-Gilles', 'Saint-Vital-de-Clermont',
+    "Hunter's Point",
+  ];
+  // Municipalités d'autres MRC d'A-T + régions voisines à exclure
+  const AUTRE_MRC_KEYWORDS = [
+    // MRC Abitibi (autour d'Amos)
+    'Amos', 'Senneterre', 'Barraute', 'Landrienne', 'Trécesson', 'Preissac',
+    'La Corne', 'Champneuf', 'Rochebaucourt', 'Sainte-Gertrude-Manneville',
+    'Pikogan',
+    // MRC Vallée-de-l'Or
+    'Val-d\'Or', 'Malartic', 'Rivière-Héva', 'Belcourt', 'Lac-Simon',
+    // Ville de Rouyn-Noranda et secteurs fusionnés
+    'Rouyn-Noranda', 'Évain', 'Cadillac', 'Cléricy', 'D\'Alembert',
+    // MRC Témiscamingue
+    'Ville-Marie', 'Témiscamingue', 'Témiscaming', 'Kipawa', 'Lorrainville',
+    'Notre-Dame-du-Nord', 'Belleterre', 'Rémigny', 'Latulipe',
+    // Régions complètement autres
+    'Nord-du-Québec', 'Eeyou Istchee', 'Jamésie',
+  ];
+  const reAO = new RegExp('\\b(' + AO_KEYWORDS.map(s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')\\b', 'i');
+  const reAutre = new RegExp('\\b(' + AUTRE_MRC_KEYWORDS.map(s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')\\b', 'i');
+
+  // Sources locales d'Abitibi-Ouest : toujours pertinentes peu importe le contenu
+  const SOURCES_LOCALES_AO = new Set([
+    'ville-lasarre', 'avis-lasarre', 'mrcao', 'cssla',
+    'ecole-musique-ao'
+  ]);
+
+  function scoreArticleAO(a) {
+    if (SOURCES_LOCALES_AO.has(a.source)) return 2; // source 100% locale
+    const texte = `${a.titre ?? ''} ${a.resume ?? ''}`;
+    const matchAO = reAO.test(texte);
+    const matchAutre = reAutre.test(texte);
+    if (matchAO) return 2;             // mention explicite A-O
+    if (matchAutre) return -1;          // autre MRC sans A-O
+    return 0;                           // neutre (régional/général)
+  }
+
+  // ─── Article row (liste compacte responsive) ─────────────────────────────────
+  function renderArticle(a) {
+    const src = SOURCES[a.source] ?? { label: a.source, color: 'bg-gray-500' };
+    const isLocale = SOURCES_LOCALES_AO.has(a.source);
+    // Couleur d'accent réservée aux sources 100% locales A-O ; les autres en gris neutre.
+    const badgeCls = isLocale ? 'bg-cjeao text-dark' : 'bg-gray-700 text-white';
+    const date = frDate(a.date_publication);
+    const url = encodeURIComponent(a.url ?? '');
+    const titre = encodeURIComponent(a.titre ?? '');
+    return `
+      <li class="group py-3 px-3 -mx-3 rounded-lg hover:bg-gray-100 transition-colors">
+        <!-- Meta row : badge + date -->
+        <div class="flex items-center justify-between gap-2 mb-1.5">
+          <span class="inline-block px-2 py-0.5 rounded text-xs font-semibold ${badgeCls} max-w-[55%] truncate" title="${src.label}">${src.label}</span>
+          <span class="text-xs text-gray-500 shrink-0">${date}</span>
+        </div>
+        <!-- Title + excerpt -->
+        <a href="${a.url}" target="_blank" rel="noopener noreferrer" class="block">
+          <p class="font-semibold text-gray-900 group-hover:text-cjeao-darker transition-colors leading-snug">${a.titre ?? ''}</p>
+          ${a.resume ? `<p class="text-sm text-gray-600 leading-relaxed mt-1 line-clamp-2">${a.resume}</p>` : ''}
+        </a>
+        <!-- Share row -->
+        <div class="flex items-center gap-1 mt-2">
+          <a href="https://twitter.com/intent/tweet?text=${titre}&url=${url}" target="_blank" rel="noopener noreferrer" aria-label="Partager sur X" class="w-10 h-10 inline-flex items-center justify-center text-gray-500 hover:bg-black hover:text-white rounded transition-colors">
+            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </a>
+          <a href="https://www.linkedin.com/sharing/share-offsite/?url=${url}" target="_blank" rel="noopener noreferrer" aria-label="Partager sur LinkedIn" class="w-10 h-10 inline-flex items-center justify-center text-gray-500 hover:bg-[#0a66c2] hover:text-white rounded transition-colors">
+            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.063 2.063 0 112.063 2.065zm1.778 13.019H3.555V9h3.56v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+          </a>
+          <a href="https://www.facebook.com/sharer/sharer.php?u=${url}" target="_blank" rel="noopener noreferrer" aria-label="Partager sur Facebook" class="w-10 h-10 inline-flex items-center justify-center text-gray-500 hover:bg-[#1877f2] hover:text-white rounded transition-colors">
+            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+          </a>
+          <button type="button" data-share-url="${a.url}" aria-label="Copier le lien" class="copier-lien w-10 h-10 inline-flex items-center justify-center text-gray-500 hover:bg-cjeao hover:text-dark rounded transition-colors">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+          </button>
+        </div>
+      </li>
+    `;
+  }
+
+  // Gestionnaire global pour le bouton "copier le lien"
+  document.addEventListener('click', async (e) => {
+    const btn = e.target.closest('.copier-lien');
+    if (!btn) return;
+    e.preventDefault();
+    const url = btn.dataset.shareUrl;
+    try {
+      await navigator.clipboard.writeText(url);
+      const original = btn.innerHTML;
+      btn.innerHTML = '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>';
+      btn.classList.add('bg-cjeao', 'text-dark');
+      setTimeout(() => { btn.innerHTML = original; btn.classList.remove('bg-cjeao', 'text-dark'); }, 1500);
+    } catch (err) {
+      console.warn('Clipboard error:', err);
+    }
+  });
+
+  // ─── Fetch & render ───────────────────────────────────────────────────────────
+  // ─── Sources surveillées ──────────────────────────────────────────────────────
+  function renderSources(compteParSource, dernierParSource) {
+    const grid = document.getElementById('sources-grid');
+    if (!grid) return;
+
+    // Trier : par catégorie puis par label
+    const entries = Object.entries(SOURCES).sort((a, b) => {
+      if (a[1].categorie !== b[1].categorie) return a[1].categorie.localeCompare(b[1].categorie);
+      return a[1].label.localeCompare(b[1].label);
+    });
+
+    grid.innerHTML = entries.map(([tag, src]) => {
+      const count = compteParSource[tag] ?? 0;
+      const dernier = dernierParSource[tag];
+      const dernierStr = dernier
+        ? `Dernière nouvelle ${relativeTime(dernier)}`
+        : 'En attente d\'une nouvelle publication';
+      const countBadge = count > 0
+        ? `<span class="text-cjeao-darker font-semibold text-sm">${count} récente${count !== 1 ? 's' : ''}</span>`
+        : `<span class="text-gray-400 text-sm">·</span>`;
+      return `
+        <a href="${src.url}" target="_blank" rel="noopener noreferrer"
+           class="group flex items-start gap-3 bg-white border border-gray-200 rounded-lg p-3 hover:border-cjeao hover:shadow-sm transition-all">
+          <span class="inline-flex shrink-0 w-2.5 h-2.5 mt-1.5 rounded-full ${SOURCES_LOCALES_AO.has(tag) ? 'bg-cjeao' : 'bg-gray-400'}"></span>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-baseline justify-between gap-2">
+              <span class="font-semibold text-gray-900 group-hover:text-cjeao-darker transition-colors truncate">${src.label}</span>
+              ${countBadge}
+            </div>
+            <div class="flex items-baseline justify-between gap-2 mt-0.5">
+              <span class="text-xs text-gray-500 uppercase tracking-wide">${src.categorie}</span>
+              <span class="text-xs text-gray-500">${dernierStr}</span>
+            </div>
+          </div>
+        </a>
+      `;
+    }).join('');
+  }
+
+  // ─── Rendu des articles avec respect du filtre A-Ouest ────────────────────────
+  function rendreArticles() {
+    const list = document.getElementById('articles-list');
+    if (!list) return;
+    const bruts = window.__articlesBruts || [];
+    const filtreOn = document.getElementById('filtre-ao')?.checked ?? true;
+
+    const filtres = filtreOn ? bruts.filter(a => scoreArticleAO(a) >= 0) : bruts;
+    const masques = bruts.length - filtres.length;
+
+    if (filtres.length > 0) {
+      list.innerHTML = filtres.map(renderArticle).join('');
+    } else if (bruts.length > 0) {
+      list.innerHTML = '<li class="text-gray-500 text-sm py-4">Aucun article pertinent pour l\'Abitibi-Ouest dans la dernière période. Décochez le filtre pour voir tout.</li>';
+    } else {
+      list.innerHTML = '<li class="text-gray-500 text-sm py-4">Aucun article disponible pour le moment.</li>';
+    }
+
+    const info = document.getElementById('filtre-info');
+    if (info) {
+      info.textContent = filtreOn && masques > 0
+        ? `(${masques} article${masques !== 1 ? 's' : ''} d'autres MRC masqué${masques !== 1 ? 's' : ''})`
+        : '';
+    }
+  }
+
+  document.getElementById('filtre-ao')?.addEventListener('change', rendreArticles);
+
+  // Variables Supabase publiques injectées au build (mêmes que la page Activités).
+  const SUPABASE_URL = import.meta.env.PUBLIC_SUPABASE_URL || '';
+  const SUPABASE_ANON_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
+
+  // Mapping clé widget → table Supabase (doit rester aligné avec nouvelles-proxy.js).
+  const TABLES_NOUVELLES = {
+    meteo: 'nouvelles_meteo',
+    essence: 'nouvelles_essence',
+    sopfeu: 'nouvelles_sopfeu',
+    finances: 'nouvelles_finances',
+    hydro: 'nouvelles_hydro',
+    routes: 'nouvelles_routes',
+    alertes: 'nouvelles_alertes',
+    urgences: 'nouvelles_urgences',
+    emplois: 'nouvelles_emplois',
+    bornes: 'nouvelles_bornes_electriques',
+    loisirs: 'nouvelles_activites_loisirs',
+    air: 'nouvelles_air',
+    aurores: 'nouvelles_aurores',
+    eau: 'nouvelles_eau',
+    internet: 'nouvelles_internet',
+    cciao: 'nouvelles_cciao',
+    transport: 'nouvelles_transport',
+  };
+
+  // Fallback : interroge Supabase directement si le proxy Netlify est indisponible.
+  async function chargerDepuisSupabase() {
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) throw new Error('Config Supabase absente');
+    const h = { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` };
+    const cles = Object.keys(TABLES_NOUVELLES);
+    const depuis30j = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const reqs = cles.map((cle) =>
+      fetch(`${SUPABASE_URL}/rest/v1/${TABLES_NOUVELLES[cle]}?select=*`, { headers: h })
+        .then((r) => (r.ok ? r.json() : []))
+        .catch(() => [])
+    );
+    reqs.push(
+      fetch(`${SUPABASE_URL}/rest/v1/nouvelles_articles?select=*&date_publication=gte.${depuis30j}&order=date_publication.desc&limit=40`, { headers: h })
+        .then((r) => (r.ok ? r.json() : []))
+        .catch(() => [])
+    );
+    // Activités du Carrefour (table activites) — à venir, exclut fermetures/fériés
+    const aujourdhuiIso = new Date().toISOString().slice(0, 10);
+    reqs.push(
+      fetch(`${SUPABASE_URL}/rest/v1/activites?select=id,titre,date,heure_debut,type&date=gte.${aujourdhuiIso}&type=not.in.(ferme,ferie)&order=date.asc,heure_debut.asc.nullslast&limit=30`, { headers: h })
+        .then((r) => (r.ok ? r.json() : []))
+        .catch(() => [])
+    );
+    const res = await Promise.all(reqs);
+    const data = {};
+    cles.forEach((cle, i) => {
+      data[cle] = Array.isArray(res[i]) ? (res[i][0] ?? null) : null;
+    });
+    data.articles = Array.isArray(res[cles.length]) ? res[cles.length] : [];
+    data.carrefour_activites = Array.isArray(res[cles.length + 1]) ? res[cles.length + 1] : [];
+    return data;
+  }
+
+  // Lit Supabase DIRECTEMENT d'abord (0 invocation Netlify — anon a SELECT sur les
+  // tables nouvelles_* via RLS). Le proxy Netlify ne sert plus que de filet de
+  // secours si la lecture directe échoue (config absente, etc.).
+  async function recupererNouvelles() {
+    try {
+      return await chargerDepuisSupabase();
+    } catch (errDirect) {
+      console.warn('[nouvelles] Supabase direct indisponible, fallback proxy Netlify:', errDirect.message);
+      const res = await fetch('/.netlify/functions/nouvelles-proxy');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (data && data.error) throw new Error(data.error);
+      // Le proxy ne retourne pas (encore) les activités Carrefour — fallback vide.
+      if (!Array.isArray(data.carrefour_activites)) data.carrefour_activites = [];
+      return data;
+    }
+  }
+
+  // Applique un jeu de données (proxy OU Supabase direct) à tous les widgets.
+  function appliquerDonnees(data) {
+      // Widgets
+      const wMeteo    = document.getElementById('widget-meteo');
+      const wEssence  = document.getElementById('widget-essence');
+      const wFinances = document.getElementById('widget-finances');
+      const wDevises  = document.getElementById('widget-devises');
+      const wSopfeu   = document.getElementById('widget-sopfeu');
+      const wAlertes  = document.getElementById('widget-alertes');
+      const wHydro    = document.getElementById('widget-hydro');
+      const wRoutes   = document.getElementById('widget-routes');
+      const wUrgences = document.getElementById('widget-urgences');
+      const wEmplois  = document.getElementById('widget-emplois');
+      const wBornes   = document.getElementById('widget-bornes');
+      const wLoisirs  = document.getElementById('widget-loisirs');
+      const wAir      = document.getElementById('widget-air');
+      const wAurores  = document.getElementById('widget-aurores');
+      const wEau      = document.getElementById('widget-eau');
+      const wInternet = document.getElementById('widget-internet');
+      const wTransport = document.getElementById('widget-transport');
+
+      if (wMeteo    && data.meteo)    wMeteo.innerHTML    = renderMeteo(data.meteo);
+      if (wEssence  && data.essence)  wEssence.innerHTML  = renderEssence(data.essence);
+      if (wFinances && data.finances) wFinances.innerHTML = renderFinances(data.finances);
+      if (wDevises  && data.finances) wDevises.innerHTML  = renderDevisesMini(data.finances);
+      if (wSopfeu   && data.sopfeu)   wSopfeu.innerHTML   = renderSopfeuMini(data.sopfeu);
+      if (wAlertes  && data.alertes)  wAlertes.innerHTML  = renderAlertesMini(data.alertes);
+      if (wHydro    && data.hydro)    wHydro.innerHTML    = renderHydroMini(data.hydro);
+      if (wRoutes   && data.routes)   wRoutes.innerHTML   = renderRoutes(data.routes);
+      if (wUrgences && data.urgences) wUrgences.innerHTML = renderUrgences(data.urgences);
+      if (wEmplois  && data.emplois)  wEmplois.innerHTML  = renderEmplois(data.emplois);
+      if (wBornes   && data.bornes)   wBornes.innerHTML   = renderBornesMini(data.bornes);
+      if (wLoisirs) wLoisirs.innerHTML = renderAgenda(data.loisirs, data.cciao, data.carrefour_activites);
+      if (wAir      && data.air)      wAir.innerHTML      = renderAirMini(data.air);
+      if (wAurores  && data.aurores)  wAurores.innerHTML  = renderAurores(data.aurores);
+      if (wEau      && data.eau)      wEau.innerHTML      = renderEau(data.eau);
+      if (wInternet && data.internet) wInternet.innerHTML = renderInternet(data.internet);
+      if (wTransport && data.transport) {
+        const html = renderTransport(data.transport);
+        if (html) {
+          wTransport.innerHTML = html;
+          wTransport.classList.remove('hidden');
+        }
+      }
+
+      // Articles — on garde TOUS les articles bruts pour pouvoir basculer le filtre
+      window.__articlesBruts = Array.isArray(data.articles) ? data.articles : [];
+      rendreArticles();
+
+      // Sources surveillées : compter les articles récents (30j) par source
+      const articles = Array.isArray(data.articles) ? data.articles : [];
+      const compteParSource = {};
+      const dernierParSource = {};
+      for (const a of articles) {
+        compteParSource[a.source] = (compteParSource[a.source] ?? 0) + 1;
+        if (!dernierParSource[a.source] || new Date(a.date_publication) > new Date(dernierParSource[a.source])) {
+          dernierParSource[a.source] = a.date_publication;
+        }
+      }
+      renderSources(compteParSource, dernierParSource);
+  }
+
+  // Chargement initial : proxy d'abord (1 appel Netlify agrégé), fallback Supabase direct.
+  async function chargerNouvelles() {
+    try {
+      appliquerDonnees(await recupererNouvelles());
+    } catch (err) {
+      console.error('[nouvelles]', err);
+      // Show error state in each widget
+      const ids = ['widget-meteo','widget-essence','widget-finances','widget-devises','widget-sopfeu','widget-alertes','widget-hydro','widget-routes','widget-urgences','widget-emplois','widget-bornes','widget-loisirs','widget-air','widget-aurores','widget-eau','widget-internet'];
+      for (const id of ids) {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = '<div class="text-xs text-gray-600 font-mono">Données indisponibles</div>';
+      }
+      const list = document.getElementById('articles-list');
+      if (list) list.innerHTML = '<li class="text-gray-500 text-sm py-4">Impossible de charger les articles.</li>';
+      // Toujours afficher les sources même si le fetch échoue
+      renderSources({}, {});
+    }
+  }
+
+  // ─── Commentaires ────────────────────────────────────────────────────────────
+  function frDateHeure(dateStr) {
+    if (!dateStr) return '';
+    return new Date(dateStr).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long' });
+  }
+
+  async function chargerCommentaires() {
+    const list = document.getElementById('commentaires-list');
+    if (!list) return;
+    try {
+      const res = await fetch('/.netlify/functions/nouvelles-commentaire');
+      const data = await res.json();
+      const comms = data.commentaires || [];
+      if (comms.length === 0) {
+        list.innerHTML = '<li class="py-4 px-4 text-sm text-gray-500">Aucune suggestion pour l\'instant. Soyez la première personne à en partager une!</li>';
+        return;
+      }
+      list.innerHTML = comms.map(c => `
+        <li class="py-3 px-4">
+          <div class="flex items-baseline justify-between gap-2 mb-1">
+            <span class="font-semibold text-gray-900 text-sm">${escapeHtml(c.nom)}</span>
+            <span class="text-xs text-gray-500 shrink-0">${frDateHeure(c.created_at)}</span>
+          </div>
+          <p class="text-sm text-gray-700 whitespace-pre-line leading-relaxed">${escapeHtml(c.message)}</p>
+        </li>
+      `).join('');
+    } catch (err) {
+      console.error('[commentaires]', err);
+      list.innerHTML = '<li class="py-4 px-4 text-sm text-gray-500">Impossible de charger les suggestions.</li>';
+    }
+  }
+
+  function escapeHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+
+  const form = document.getElementById('form-commentaire');
+  if (form) {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const statut = document.getElementById('c-status');
+      const btn = form.querySelector('button[type="submit"]');
+      const data = {
+        nom: form.nom.value,
+        courriel: form.courriel.value,
+        message: form.message.value,
+        website: form.website.value,
+      };
+      statut.textContent = 'Envoi…';
+      statut.className = 'text-sm text-gray-500';
+      btn.disabled = true;
+      try {
+        const res = await fetch('/.netlify/functions/nouvelles-commentaire', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+        const result = await res.json();
+        if (res.ok) {
+          statut.textContent = '✓ Merci! Votre message a été reçu.';
+          statut.className = 'text-sm text-cjeao-darker font-semibold';
+          form.reset();
+          chargerCommentaires(); // refresh la liste
+        } else {
+          statut.textContent = result.error || 'Erreur lors de l\'envoi.';
+          statut.className = 'text-sm text-red-600';
+        }
+      } catch (err) {
+        statut.textContent = 'Erreur réseau. Réessayez.';
+        statut.className = 'text-sm text-red-600';
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  }
+
+  // ─── Date et heure en vedette ─────────────────────────────────────────────────
+  function majDateHeure() {
+    const now = new Date();
+    const dateEl = document.getElementById('date-aujourdhui');
+    const heureEl = document.getElementById('heure-aujourdhui');
+    if (dateEl) {
+      dateEl.textContent = now.toLocaleDateString('fr-CA', {
+        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+      });
+    }
+    if (heureEl) {
+      heureEl.textContent = now.toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit', hour12: false });
+    }
+  }
+  majDateHeure();
+  setInterval(majDateHeure, 30 * 1000); // refresh every 30s
+
+  // ─── Visiteurs en temps réel (Plausible) ──────────────────────────────────────
+  async function majVisiteurs() {
+    try {
+      const res = await fetch('/.netlify/functions/nouvelles-visiteurs', { cache: 'no-store' });
+      const data = await res.json();
+      const bloc = document.getElementById('visiteurs-bloc');
+      const nb = document.getElementById('visiteurs-nombre');
+      if (data.visiteurs == null || data.error) {
+        if (bloc) { bloc.classList.add('hidden'); bloc.classList.remove('inline-flex'); }
+        return;
+      }
+      if (nb) nb.textContent = data.visiteurs;
+      if (bloc) { bloc.classList.remove('hidden'); bloc.classList.add('inline-flex'); }
+    } catch (err) { /* silencieux */ }
+  }
+  majVisiteurs();
+  // Toutes les 5 min, et seulement si l'onglet est visible (Plausible compte déjà
+  // les visiteurs des 5 dernières minutes — inutile de marteler la fonction Netlify).
+  setInterval(() => { if (!document.hidden) majVisiteurs(); }, 5 * 60 * 1000);
+
+  // ─── PWA : enregistrement du service worker + bouton d'installation ──────────
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch((err) => {
+      console.warn('SW registration failed:', err);
+    });
+  }
+
+  // Détection iOS Safari (les autres navigateurs iOS ne supportent pas l'install)
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  const isSafari = /^((?!chrome|crios|fxios|edgios).)*safari/i.test(navigator.userAgent);
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  const btnInstall = document.getElementById('btn-installer');
+
+  // Si déjà installé (lancée depuis l'écran d'accueil), on cache tout
+  if (!isStandalone && btnInstall) {
+    if (isIOS && isSafari) {
+      // iOS Safari : on affiche le bouton dès le départ, le clic ouvre le popup d'instructions.
+      // Sauf si l'utilisateur a coché "Ne plus afficher".
+      if (localStorage.getItem('cjeao_ios_install_dismissed') !== '1') {
+        btnInstall.classList.remove('hidden');
+        btnInstall.classList.add('inline-flex');
+      }
+    }
+    // Android / Chrome desktop : le bouton apparaît seulement quand le navigateur propose l'install
+  }
+
+  // Cas Android / Chromium : capture l'événement et change le comportement du bouton
+  let promptInstall = null;
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    promptInstall = e;
+    if (btnInstall && !isStandalone) {
+      btnInstall.classList.remove('hidden');
+      btnInstall.classList.add('inline-flex');
+    }
+  });
+
+  if (btnInstall) {
+    btnInstall.addEventListener('click', async () => {
+      if (promptInstall) {
+        // Android : prompt natif
+        promptInstall.prompt();
+        const { outcome } = await promptInstall.userChoice;
+        promptInstall = null;
+        if (outcome === 'accepted') {
+          btnInstall.classList.add('hidden');
+          btnInstall.classList.remove('inline-flex');
+        }
+      } else if (isIOS) {
+        // iOS : ouvrir le popup d'instructions
+        document.getElementById('dialog-ios-install')?.showModal();
+      }
+    });
+  }
+
+  // Boutons du popup iOS
+  document.getElementById('dialog-ios-close')?.addEventListener('click', () => {
+    document.getElementById('dialog-ios-install')?.close();
+  });
+  document.getElementById('ios-ok')?.addEventListener('click', () => {
+    document.getElementById('dialog-ios-install')?.close();
+  });
+  document.getElementById('ios-ne-plus-afficher')?.addEventListener('click', () => {
+    localStorage.setItem('cjeao_ios_install_dismissed', '1');
+    document.getElementById('dialog-ios-install')?.close();
+    if (btnInstall) {
+      btnInstall.classList.add('hidden');
+      btnInstall.classList.remove('inline-flex');
+    }
+  });
+  // Fermer en cliquant sur le backdrop
+  document.getElementById('dialog-ios-install')?.addEventListener('click', (e) => {
+    if (e.target.id === 'dialog-ios-install') e.target.close();
+  });
+
+  window.addEventListener('appinstalled', () => {
+    if (btnInstall) {
+      btnInstall.classList.add('hidden');
+      btnInstall.classList.remove('inline-flex');
+    }
+  });
+
+  // ─── Notifications push : opt-in alertes urgentes ─────────────────────────────
+  const VAPID_PUB = window.VAPID_PUBLIC_KEY || '';
+  const btnAlertes = document.getElementById('btn-alertes');
+  const dlgAlertes = document.getElementById('dialog-alertes');
+  const pushSupporte = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+
+  function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const raw = atob(base64);
+    const out = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+    return out;
+  }
+
+  async function dejaAbonne() {
+    if (!pushSupporte) return false;
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      return !!sub;
+    } catch { return false; }
+  }
+
+  function majBoutonAlertes() {
+    if (!btnAlertes || !pushSupporte) return;
+    // Cacher si permission déjà refusée ou déjà accordée+abonné
+    if (Notification.permission === 'denied') {
+      btnAlertes.classList.add('hidden');
+      btnAlertes.classList.remove('inline-flex');
+      return;
+    }
+    dejaAbonne().then((abonne) => {
+      if (abonne) {
+        btnAlertes.classList.add('hidden');
+        btnAlertes.classList.remove('inline-flex');
+      } else {
+        btnAlertes.classList.remove('hidden');
+        btnAlertes.classList.add('inline-flex');
+      }
+    });
+  }
+
+  async function activerAlertes() {
+    const erreur = document.getElementById('alertes-erreur');
+    erreur?.classList.add('hidden');
+
+    if (!pushSupporte) {
+      if (erreur) {
+        erreur.textContent = 'Ce navigateur ne supporte pas les notifications push.';
+        erreur.classList.remove('hidden');
+      }
+      return;
+    }
+    // iOS : faut être en mode standalone (installé)
+    if (isIOS && !isStandalone) {
+      document.getElementById('alertes-ios-help')?.classList.remove('hidden');
+      return;
+    }
+    if (!VAPID_PUB) {
+      if (erreur) {
+        erreur.textContent = 'Configuration incomplète (clé serveur manquante).';
+        erreur.classList.remove('hidden');
+      }
+      return;
+    }
+
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        if (erreur) {
+          erreur.textContent = permission === 'denied'
+            ? 'Permission refusée. Activez les notifications dans les réglages du navigateur.'
+            : 'Permission non accordée.';
+          erreur.classList.remove('hidden');
+        }
+        return;
+      }
+
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUB),
+      });
+
+      const subJson = sub.toJSON();
+      const res = await fetch('/.netlify/functions/push-subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          endpoint: sub.endpoint,
+          keys: subJson.keys,
+          userAgent: navigator.userAgent,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error('Échec enregistrement serveur');
+      }
+
+      dlgAlertes?.close();
+      majBoutonAlertes();
+      // Notification locale de confirmation
+      try {
+        await reg.showNotification('Alertes activées', {
+          body: 'Vous recevrez les alertes urgentes de la région.',
+          icon: '/icon-192.png',
+          tag: 'cjeao-bienvenue',
+        });
+      } catch {}
+    } catch (err) {
+      if (erreur) {
+        erreur.textContent = 'Erreur : ' + (err?.message || err);
+        erreur.classList.remove('hidden');
+      }
+    }
+  }
+
+  if (btnAlertes) {
+    btnAlertes.addEventListener('click', () => {
+      document.getElementById('alertes-erreur')?.classList.add('hidden');
+      document.getElementById('alertes-ios-help')?.classList.toggle('hidden', !(isIOS && !isStandalone));
+      dlgAlertes?.showModal();
+    });
+  }
+  document.getElementById('alertes-activer')?.addEventListener('click', activerAlertes);
+  document.getElementById('alertes-plus-tard')?.addEventListener('click', () => {
+    localStorage.setItem('cjeao_alertes_prompt_seen', '1');
+    dlgAlertes?.close();
+  });
+  document.getElementById('dialog-alertes-close')?.addEventListener('click', () => dlgAlertes?.close());
+  dlgAlertes?.addEventListener('click', (e) => {
+    if (e.target.id === 'dialog-alertes') e.target.close();
+  });
+
+  majBoutonAlertes();
+
+  // Prompt automatique au premier démarrage en standalone après installation
+  if (isStandalone && pushSupporte && Notification.permission === 'default'
+      && !localStorage.getItem('cjeao_alertes_prompt_seen')) {
+    setTimeout(() => {
+      dlgAlertes?.showModal();
+      localStorage.setItem('cjeao_alertes_prompt_seen', '1');
+    }, 1500);
+  }
+
+  // ─── Bannière iOS proactive (bottom-sheet d'installation) ─────────────────────
+  // Apparaît sur iPhone Safari, pas encore installé, pas dismissé récemment.
+  if (isIOS && isSafari && !isStandalone) {
+    const dismissUntil = parseInt(localStorage.getItem('cjeao_ios_banner_dismiss_until') || '0', 10);
+    if (Date.now() > dismissUntil) {
+      const banner = document.getElementById('ios-banner');
+      if (banner) {
+        setTimeout(() => {
+          banner.classList.remove('hidden');
+        }, 6000);
+        document.getElementById('ios-banner-cta')?.addEventListener('click', () => {
+          banner.classList.add('hidden');
+          document.getElementById('dialog-ios-install')?.showModal();
+        });
+        document.getElementById('ios-banner-close')?.addEventListener('click', () => {
+          banner.classList.add('hidden');
+          // Re-proposer dans 7 jours
+          localStorage.setItem('cjeao_ios_banner_dismiss_until', String(Date.now() + 7 * 24 * 3600 * 1000));
+        });
+      }
+    }
+  }
+
+  // ─── Popup stations d'essence ─────────────────────────────────────────────────
+  function ouvrirDialogStations() {
+    const dialog = document.getElementById('dialog-stations');
+    const list = document.getElementById('dialog-stations-list');
+    const stations = window.__toutesStations || [];
+    if (!dialog || !list) return;
+    const prixMin = stations.reduce((m, s) => s.prix_regulier != null && s.prix_regulier < m ? s.prix_regulier : m, Infinity);
+    list.innerHTML = stations.map(s => {
+      const reg = s.prix_regulier != null ? s.prix_regulier.toFixed(1) + '¢' : '—';
+      const die = s.prix_diesel != null ? s.prix_diesel.toFixed(1) + '¢' : '—';
+      const estMin = s.prix_regulier === prixMin;
+      return `
+        <li class="px-5 py-3 ${estMin ? 'bg-cjeao/10' : ''}">
+          <div class="flex items-baseline justify-between gap-3 mb-1">
+            <div class="min-w-0">
+              <div class="font-semibold text-gray-900 truncate">
+                ${escapeHtml(s.nom ?? '—')}
+                ${estMin ? '<span class="ml-1 text-[0.65rem] font-bold uppercase tracking-wider bg-cjeao text-dark px-1.5 py-0.5 rounded">Min</span>' : ''}
+              </div>
+              <div class="text-xs text-gray-500 truncate">${escapeHtml(s.adresse ?? s.ville ?? '')}</div>
+            </div>
+            <div class="text-right shrink-0">
+              <div class="text-lg font-extrabold text-gray-900 tabular-nums">${reg}</div>
+              <div class="text-xs text-gray-500">Diesel ${die}</div>
+            </div>
+          </div>
+        </li>
+      `;
+    }).join('') || '<li class="px-5 py-6 text-center text-gray-500 text-sm">Aucune station chargée.</li>';
+    dialog.showModal();
+  }
+
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('#btn-voir-stations')) {
+      e.preventDefault();
+      ouvrirDialogStations();
+    }
+    if (e.target.id === 'dialog-stations-close') {
+      document.getElementById('dialog-stations')?.close();
+    }
+  });
+
+  // Fermer le dialog si on clique sur le backdrop
+  document.getElementById('dialog-stations')?.addEventListener('click', (e) => {
+    if (e.target.id === 'dialog-stations') e.target.close();
+  });
+
+  // ─── Analytics : tracker les clics sur widgets et articles ────────────────────
+  function track(eventName, params = {}) {
+    if (typeof window.gtag === 'function') {
+      window.gtag('event', eventName, params);
+    }
+    // Plausible (chargé si présent — gracefully no-op sinon)
+    if (typeof window.plausible === 'function') {
+      window.plausible(eventName, { props: params });
+    }
+  }
+
+  // Délégation globale : tracker tout lien sortant ou bouton significatif
+  document.addEventListener('click', (e) => {
+    const widgetLink = e.target.closest('[id^="widget-"] a[href^="http"]');
+    if (widgetLink) {
+      const widgetId = widgetLink.closest('[id^="widget-"]').id.replace('widget-', '');
+      track('widget_click', { widget: widgetId, url: widgetLink.href });
+      return;
+    }
+    const articleLink = e.target.closest('#articles-list a[href^="http"]');
+    if (articleLink) {
+      const li = articleLink.closest('li');
+      const badge = li?.querySelector('span[class*="bg-"]')?.textContent?.trim() || 'inconnu';
+      track('article_click', { source: badge, url: articleLink.href });
+      return;
+    }
+    const shareBtn = e.target.closest('a[href*="twitter.com/intent"], a[href*="linkedin.com/sharing"], a[href*="facebook.com/sharer"]');
+    if (shareBtn) {
+      let reseau = 'autre';
+      if (shareBtn.href.includes('twitter.com')) reseau = 'twitter';
+      else if (shareBtn.href.includes('linkedin.com')) reseau = 'linkedin';
+      else if (shareBtn.href.includes('facebook.com')) reseau = 'facebook';
+      track('partage', { reseau });
+    }
+    if (e.target.closest('#btn-installer')) track('pwa_installer_clic');
+    if (e.target.closest('#btn-voir-stations')) track('voir_stations_essence');
+  });
+
+  // ─── Personnalisation des widgets ──────────────────────────────────────────
+  const PREFS_KEY = 'cjeao-widget-prefs';
+  const WIDGET_REGISTRY = [
+    { id: 'widget-transport',label: 'Transport scolaire',   group: 'Essentiel' },
+    { id: 'widget-meteo',     label: 'Météo',               group: 'Essentiel' },
+    { id: 'widget-essence',   label: 'Essence',             group: 'Essentiel' },
+    { id: 'widget-finances',  label: 'Or',                  group: 'Essentiel' },
+    { id: 'widget-devises',   label: 'Devises (USD · EUR)', group: 'En un coup d\'œil' },
+    { id: 'widget-urgences',  label: 'Urgences',            group: 'Essentiel' },
+    { id: 'widget-sopfeu',    label: 'SOPFEU',              group: 'En un coup d\'œil' },
+    { id: 'widget-alertes',   label: 'Alertes météo',       group: 'En un coup d\'œil' },
+    { id: 'widget-hydro',     label: 'Hydro-Québec',        group: 'En un coup d\'œil' },
+    { id: 'widget-bornes',    label: 'Bornes électriques',  group: 'En un coup d\'œil' },
+    { id: 'widget-air',       label: 'Qualité de l\'air',   group: 'En un coup d\'œil' },
+    { id: 'widget-routes',    label: 'Routes',              group: 'Vie quotidienne' },
+    { id: 'widget-loisirs',   label: 'Agenda Abitibi-Ouest', group: 'Vie quotidienne' },
+    { id: 'widget-aurores',   label: 'Ciel nocturne',       group: 'Vie quotidienne' },
+    { id: 'widget-eau',       label: 'Niveaux d\'eau',      group: 'Vie quotidienne' },
+    { id: 'widget-emplois',   label: 'Emplois',             group: 'Économie' },
+    { id: 'widget-internet',  label: 'Internet',            group: 'Économie' },
+  ];
+
+  function loadPrefs() {
+    try { return JSON.parse(localStorage.getItem(PREFS_KEY)) || {}; } catch { return {}; }
+  }
+
+  function savePrefs(prefs) {
+    localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+  }
+
+  function applyPrefs() {
+    const prefs = loadPrefs();
+    for (const w of WIDGET_REGISTRY) {
+      const el = document.getElementById(w.id);
+      if (!el) continue;
+      const visible = prefs[w.id] !== false;
+      el.style.display = visible ? '' : 'none';
+    }
+    // Reflow : ajuster le nombre de colonnes pour densifier la grille.
+    document.querySelectorAll('.widget-grid').forEach(grid => {
+      const children = [...grid.children].filter(c => c.id?.startsWith('widget-'));
+      if (children.length === 0) return;
+      const visibleChildren = children.filter(c => c.style.display !== 'none');
+      const visibleCount = visibleChildren.length;
+      // Compte pondéré qui tient compte des widgets avec col-span (data-col-span)
+      const visibleWeight = visibleChildren.reduce((sum, c) => sum + (parseInt(c.dataset.colSpan || '1', 10)), 0);
+      if (visibleCount === 0) {
+        grid.style.display = 'none';
+        return;
+      }
+      grid.style.display = '';
+      const baseMax = parseInt(grid.dataset.colsBaseMax || '1', 10);
+      const smMax   = parseInt(grid.dataset.colsSmMax   || String(baseMax), 10);
+      const lgMax   = parseInt(grid.dataset.colsLgMax   || String(smMax), 10);
+      grid.style.setProperty('--cols-base', Math.min(visibleWeight, baseMax));
+      grid.style.setProperty('--cols-sm',   Math.min(visibleWeight, smMax));
+      grid.style.setProperty('--cols-lg',   Math.min(visibleWeight, lgMax));
+    });
+  }
+
+  function buildPrefsModal() {
+    const list = document.getElementById('modal-prefs-list');
+    const prefs = loadPrefs();
+    const groups = {};
+    for (const w of WIDGET_REGISTRY) {
+      (groups[w.group] = groups[w.group] || []).push(w);
+    }
+    list.innerHTML = Object.entries(groups).map(([group, widgets]) => `
+      <div class="mb-3">
+        <div class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 mt-2">${group}</div>
+        ${widgets.map(w => {
+          const checked = prefs[w.id] !== false;
+          return `<label class="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-800/50 cursor-pointer transition-colors group">
+            <span class="text-sm text-gray-200 group-hover:text-white transition-colors">${w.label}</span>
+            <div class="relative">
+              <input type="checkbox" data-widget="${w.id}" ${checked ? 'checked' : ''}
+                class="sr-only peer" />
+              <div class="w-9 h-5 bg-gray-700 rounded-full peer-checked:bg-cjeao transition-colors"></div>
+              <div class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform peer-checked:translate-x-4"></div>
+            </div>
+          </label>`;
+        }).join('')}
+      </div>
+    `).join('');
+  }
+
+  // Ouvrir / fermer le modal
+  const modal = document.getElementById('modal-prefs');
+  const btnOpen = document.getElementById('btn-personnaliser');
+  const btnClose = document.getElementById('modal-prefs-close');
+  const btnDone = document.getElementById('modal-prefs-done');
+  const btnReset = document.getElementById('modal-prefs-reset');
+  const backdrop = document.getElementById('modal-prefs-backdrop');
+
+  function openPrefsModal() {
+    buildPrefsModal();
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+  function closePrefsModal() {
+    modal.classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+
+  btnOpen.addEventListener('click', openPrefsModal);
+  btnClose.addEventListener('click', closePrefsModal);
+  backdrop.addEventListener('click', closePrefsModal);
+  btnDone.addEventListener('click', closePrefsModal);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !modal.classList.contains('hidden')) closePrefsModal();
+  });
+
+  // Sauvegarder en temps réel quand on toggle un switch
+  document.getElementById('modal-prefs-list').addEventListener('change', (e) => {
+    const cb = e.target;
+    if (!cb.dataset.widget) return;
+    const prefs = loadPrefs();
+    prefs[cb.dataset.widget] = cb.checked;
+    savePrefs(prefs);
+    applyPrefs();
+    updatePrefsIndicator();
+  });
+
+  // Réinitialiser
+  btnReset.addEventListener('click', () => {
+    localStorage.removeItem(PREFS_KEY);
+    applyPrefs();
+    updatePrefsIndicator();
+    buildPrefsModal();
+  });
+
+  function updatePrefsIndicator() {
+    const prefs = loadPrefs();
+    const hiddenCount = WIDGET_REGISTRY.filter(w => prefs[w.id] === false).length;
+    const indicator = document.getElementById('prefs-indicator');
+    if (hiddenCount > 0) {
+      if (!indicator) {
+        const dot = document.createElement('span');
+        dot.id = 'prefs-indicator';
+        dot.className = 'absolute -top-1 -right-1 w-3.5 h-3.5 bg-cjeao text-dark text-[0.55rem] font-bold rounded-full flex items-center justify-center';
+        dot.textContent = hiddenCount;
+        btnOpen.style.position = 'relative';
+        btnOpen.appendChild(dot);
+      } else {
+        indicator.textContent = hiddenCount;
+      }
+    } else if (indicator) {
+      indicator.remove();
+    }
+  }
+
+  // Appliquer les préférences au chargement
+  applyPrefs();
+  updatePrefsIndicator();
+
+  // Afficher tout de suite la liste des sources (sans les counts)
+  renderSources({}, {});
+  chargerNouvelles();
+  chargerCommentaires();
+
+  // ─── Auto-refresh des widgets (kiosque + visiteurs) ───────────────────────────
+  // Relit Supabase DIRECTEMENT (clé anon) → 0 invocation Netlify. Les widgets se
+  // mettent à jour dès que les crons écrivent, sans rechargement de page.
+  async function rafraichirNouvelles() {
+    try {
+      appliquerDonnees(await chargerDepuisSupabase());
+    } catch (err) {
+      // En cas d'échec, on garde les données déjà affichées (pas d'état d'erreur).
+      console.warn('[nouvelles] auto-refresh ignoré:', err.message);
+    }
+  }
+  // Toutes les 5 min, uniquement si l'onglet est visible.
+  setInterval(() => { if (!document.hidden) rafraichirNouvelles(); }, 5 * 60 * 1000);
+  // Rafraîchir aussi dès qu'on revient sur l'onglet après une absence.
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) rafraichirNouvelles();
+  });
+</script>

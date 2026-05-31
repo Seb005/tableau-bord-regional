@@ -1,0 +1,52 @@
+---
+const PRIVACY_URL = import.meta.env.PUBLIC_PRIVACY_URL || '#';
+const HAS_TRACKERS = !!(import.meta.env.PUBLIC_GA4_ID || import.meta.env.PUBLIC_FB_PIXEL_ID);
+---
+
+{HAS_TRACKERS && (
+  <div id="cookie-banner" class="fixed bottom-0 left-0 right-0 z-50 hidden">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-4">
+      <div class="bg-gray-900 border border-gray-700 rounded-xl p-5 sm:p-6 shadow-2xl flex flex-col sm:flex-row items-start sm:items-center gap-4">
+        <div class="flex-1">
+          <p class="text-gray-200 text-sm leading-relaxed">
+            Ce site utilise des cookies d'analyse pour améliorer votre expérience.
+            {PRIVACY_URL !== '#' && (
+              <a href={PRIVACY_URL} class="text-cjeao hover:underline">Politique de confidentialité</a>
+            )}
+          </p>
+        </div>
+        <div class="flex gap-3 shrink-0">
+          <button id="cookie-refuse" class="px-5 py-2.5 border border-gray-600 text-gray-300 text-sm font-medium rounded-lg hover:border-gray-400 hover:text-white transition-colors">
+            Refuser
+          </button>
+          <button id="cookie-accept" class="px-5 py-2.5 bg-cjeao text-dark text-sm font-semibold rounded-lg hover:shadow-[0_0_20px_rgba(0,255,110,0.3)] transition-all">
+            Accepter
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script is:inline>
+    (function() {
+      var consent = document.cookie.replace(/(?:(?:^|.*;\s*)site_consent\s*=\s*([^;]*).*$)|^.*$/, '$1');
+      if (consent) return;
+
+      var banner = document.getElementById('cookie-banner');
+      if (!banner) return;
+      banner.classList.remove('hidden');
+
+      document.getElementById('cookie-accept').addEventListener('click', function() {
+        document.cookie = 'site_consent=accepted; path=/; max-age=31536000; SameSite=Lax';
+        banner.classList.add('hidden');
+        if (typeof loadGA4 === 'function') loadGA4();
+        if (typeof loadMetaPixel === 'function') loadMetaPixel();
+      });
+
+      document.getElementById('cookie-refuse').addEventListener('click', function() {
+        document.cookie = 'site_consent=refused; path=/; max-age=31536000; SameSite=Lax';
+        banner.classList.add('hidden');
+      });
+    })();
+  </script>
+)}

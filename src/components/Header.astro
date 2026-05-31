@@ -1,0 +1,101 @@
+---
+import site from '../data/site.json';
+
+const navLinks = [
+  { href: '/nouvelles', label: 'Tableau de bord' },
+  { href: '/nouvelles/archives', label: 'Archives' },
+  { href: '/nouvelles/methodologie', label: 'Méthodologie' },
+];
+
+const currentPath = Astro.url.pathname;
+---
+
+<header class="fixed top-0 left-0 right-0 z-50">
+  <nav class="bg-dark/90 backdrop-blur-xl px-5 lg:px-8">
+    <div class="flex items-center justify-between h-14 lg:h-16 max-w-6xl mx-auto">
+      <a href="/nouvelles" class="text-white font-bold text-sm tracking-wide">
+        {site.shortName} <span class="text-gray-500 font-normal">— {site.region}</span>
+      </a>
+
+      <div class="hidden lg:flex items-center gap-1">
+        {navLinks.map(link => (
+          <a
+            href={link.href}
+            class:list={[
+              'px-4 py-2.5 text-[13px] font-medium transition-colors',
+              currentPath === link.href || (link.href !== '/nouvelles' && currentPath.startsWith(link.href))
+                ? 'text-cjeao'
+                : 'text-gray-400 hover:text-white',
+            ]}
+          >
+            {link.label}
+          </a>
+        ))}
+        <a
+          href={site.repo}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="ml-3 px-4 py-2.5 border border-white/20 text-white font-medium hover:border-cjeao hover:text-cjeao transition-colors text-[13px] font-mono uppercase tracking-wider"
+        >
+          GitHub ↗
+        </a>
+      </div>
+
+      <button
+        id="mobile-menu-btn"
+        class="lg:hidden w-10 h-10 flex items-center justify-center text-gray-400 hover:text-white"
+        aria-label="Ouvrir le menu"
+        aria-expanded="false"
+      >
+        <svg id="menu-icon-open" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+        <svg id="menu-icon-close" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <div id="mobile-menu" class="hidden lg:hidden pb-6 pt-4 border-t border-white/[0.06] mt-2">
+      <div class="flex flex-col gap-1">
+        {navLinks.map(link => (
+          <a
+            href={link.href}
+            class:list={[
+              'px-4 py-3 font-medium text-sm border-b border-white/[0.04]',
+              currentPath === link.href || (link.href !== '/nouvelles' && currentPath.startsWith(link.href))
+                ? 'text-cjeao'
+                : 'text-gray-400',
+            ]}
+          >
+            {link.label}
+          </a>
+        ))}
+        <a
+          href={site.repo}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="mt-2 px-4 py-3 border border-white/20 text-white text-center text-sm font-mono uppercase tracking-wider"
+        >
+          GitHub ↗
+        </a>
+      </div>
+    </div>
+  </nav>
+</header>
+
+<div class="h-14 lg:h-16 bg-dark"></div>
+
+<script>
+  const btn = document.getElementById('mobile-menu-btn');
+  const menu = document.getElementById('mobile-menu');
+  const iconOpen = document.getElementById('menu-icon-open');
+  const iconClose = document.getElementById('menu-icon-close');
+
+  btn?.addEventListener('click', () => {
+    const isOpen = menu?.classList.toggle('hidden') === false;
+    iconOpen?.classList.toggle('hidden', isOpen);
+    iconClose?.classList.toggle('hidden', !isOpen);
+    btn.setAttribute('aria-expanded', String(isOpen));
+  });
+</script>
