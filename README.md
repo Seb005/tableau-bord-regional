@@ -2,6 +2,8 @@
 
 > Un tableau de bord open source qui compile en un coup d'œil **la météo, les urgences, les routes, les pannes Hydro, les alertes, le prix de l'essence, les emplois, l'agenda local et les nouvelles régionales** — agrégés depuis plus de 20 sources publiques.
 
+![Aperçu du tableau de bord — météo, essence, or, urgences, routes, hydro, qualité de l'air, niveaux d'eau et plus](docs/screenshot.png)
+
 Construit pour le [Carrefour jeunesse-emploi d'Abitibi-Ouest](https://www.cjeao.qc.ca/) (CJEAO), partagé sous licence MIT pour que d'autres régions puissent l'adapter et le déployer.
 
 **👉 Voir l'instance de démonstration :** [cjeao.qc.ca/nouvelles](https://www.cjeao.qc.ca/nouvelles)
